@@ -1,0 +1,16 @@
+{
+  "name": "Working Dev Container",
+  "build": { "dockerfile": "Dockerfile", "context": ".." },
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "extensions": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-tslint-plugin",
+    "ms-vscode.node-debug2"
+  ],
+  "forwardPorts": [3000, 9229],
+  "postCreateCommand": "npm ci || npm install && npm run build || true",
+  "remoteUser": "vscode"
+}
