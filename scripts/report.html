@@ -464,12 +464,116 @@ claude mcp add clipforge -- npx -y tsx mcp/server.ts
   </div>
 </section>
 
+<!-- ══════════════════════ 6 · THE EDITOR ══════════════════════ -->
+<section class="page">
+  <div class="pad">
+    <div class="phead">
+      <div>
+        <div class="tag">06 · The editor</div>
+        <h3>A timeline, not a form</h3>
+      </div>
+      <span class="pill v">CapCut-class</span>
+    </div>
+
+    <p style="font-size:11.5px; margin-bottom:4mm">
+      Phase 3 turns ClipForge from a clipper into an <b>editor</b>. The new
+      <b>Editor</b> tab stacks four tracks — video, text, stickers and audio — on one ruler.
+      Every change you make in the inspector compiles into a single JSON project, and one
+      ffmpeg pass renders the finished MP4. Nothing is uploaded anywhere, nothing is paid,
+      and the same document is what Claude sends when it calls <span class="mono">edit_video</span>.
+    </p>
+
+    <div class="grid g3" style="margin-bottom:4mm">
+      <div class="card">
+        <div class="tag" style="margin-bottom:2mm">Timeline</div>
+        <p style="font-size:10.5px">
+          Up to 40 cuts · trim to 0.1 s · split at the playhead · reorder ·
+          0.25&times;–4&times; speed · reverse · 1–3&times; push-in · per-clip mute
+        </p>
+      </div>
+      <div class="card">
+        <div class="tag" style="margin-bottom:2mm">Look &amp; motion</div>
+        <p style="font-size:10.5px">
+          16 one-click grades · 8 camera presets · 58 transitions
+          and 15 video FX with adjustable duration
+        </p>
+      </div>
+      <div class="card">
+        <div class="tag" style="margin-bottom:2mm">Type &amp; sound</div>
+        <p style="font-size:10.5px">
+          Any-position titles · 5 animations · boxes and shadows · sticker overlays with
+          rotation and fade · music beds that auto-duck under dialogue
+        </p>
+      </div>
+    </div>
+
+    <figure style="margin-bottom:4mm">
+      <img src="../docs/img/08-arsenal.jpg" alt="Six clips in one timeline, each with a different grade and video effect: vivid+glitch, cinematic+VHS, B&W+film, neon+bloom, warm+dream, noir+crisp" />
+      <figcaption>One timeline, six grades and six FX: vivid+glitch · cinematic+VHS · B&amp;W+film · neon+bloom · warm+dream · noir+crisp HD</figcaption>
+    </figure>
+
+    <div class="grid g3" style="margin-bottom:4mm">
+      <div class="card">
+        <div class="tag" style="margin-bottom:2mm">58 transitions</div>
+        <p style="font-size:10.5px">
+          fades · wipes in 8 directions · slides · covers · reveals · circle, rect, vert, horz and
+          radial opens · glitch slices · wind · pixelate · zoom — every xfade this ffmpeg supports,
+          verified against the binary at test time.
+        </p>
+      </div>
+      <div class="card">
+        <div class="tag" style="margin-bottom:2mm">17 sound presets</div>
+        <p style="font-size:10.5px">
+          podcast voice · bass boost · concert hall · lo-fi · radio · telephone · 8D swirl ·
+          cinematic boom · vinyl · vocal-reduce · slowed+reverb — plus a −12…+12 semitone
+          pitch shift and loudness normalisation.
+        </p>
+      </div>
+      <div class="card">
+        <div class="tag" style="margin-bottom:2mm">Music that is actually free</div>
+        <p style="font-size:10.5px">
+          SoundCloud · Bandcamp · Archive.org · Jamendo, each with its licence shown.
+          Eight SFX are synthesised by ffmpeg on demand. Spotify is not included — it needs
+          Premium and its terms forbid downloading, so no honest "free unlimited" exists there.
+        </p>
+      </div>
+    </div>
+
+    <figure style="margin-bottom:4mm">
+      <img src="../docs/img/07-editor.jpg" alt="Three frames from a rendered multi-track edit: pop-in title with a sticker, slide-up subtitle during a dissolve, and a noir grade" />
+      <figcaption>One rendered project, three moments: pop-in title + sticker · slide-up subtitle across a dissolve · noir grade with a speed ramp</figcaption>
+    </figure>
+
+    <div class="grid g2">
+      <div class="card">
+        <div class="tag" style="margin-bottom:2mm">One-tap recipes</div>
+        <p style="font-size:10.5px">
+          Viral hook · Cinematic open · Podcast clip · Retro VHS · Aesthetic B&amp;W · Neon night ·
+          Tutorial · Face zoom — each patches the selected clip's look, motion, transition and title.
+        </p>
+      </div>
+      <div class="card">
+        <div class="tag" style="margin-bottom:2mm">YouTube, honestly</div>
+        <p style="font-size:10.5px">
+          Eight player clients, cookie jars and exponential retries are tried automatically.
+          When YouTube still refuses, ClipForge names the real cause — network block, bot check,
+          IP-locked 403 or a private video — and the one fix, instead of a stack trace.
+        </p>
+      </div>
+    </div>
+
+    <div class="pfoot">
+      <span>ClipForge · the editor</span><span>Rugved.pvt.ltd · 2026</span>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════════════════ 6 · SERVICE GALLERY ══════════════════════ -->
 <section class="page">
   <div class="pad">
     <div class="phead">
       <div>
-        <div class="tag">06 · Service gallery</div>
+        <div class="tag">07 · Service gallery</div>
         <h3>What a delivery looks like</h3>
       </div>
       <span class="pill l">real output</span>

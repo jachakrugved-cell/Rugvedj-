@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ConnectView from "@/components/ConnectView";
 import CrewView from "@/components/CrewView";
+import EditorView from "@/components/EditorView";
 import LibraryView from "@/components/LibraryView";
 import LiveView from "@/components/LiveView";
 import StudioView from "@/components/StudioView";
@@ -16,7 +17,7 @@ import type {
   Task,
 } from "@/lib/types";
 
-type Tab = "studio" | "crew" | "live" | "library" | "connect";
+type Tab = "studio" | "editor" | "crew" | "live" | "library" | "connect";
 
 const EMPTY_RANGE = { start: 0, end: 0 };
 
@@ -240,6 +241,7 @@ export default function App() {
           {(
             [
               ["studio", "Studio"],
+              ["editor", "Editor"],
               ["crew", "Crew"],
               ["live", "Live"],
               ["library", `Library${clips.length ? ` · ${clips.length}` : ""}`],
@@ -252,6 +254,19 @@ export default function App() {
           ))}
         </nav>
       </header>
+
+      {tab === "editor" && (
+        <EditorView
+          clips={clips}
+          onRendered={(clip) => {
+            setClips((prev) => [clip, ...prev.filter((c) => c.id !== clip.id)]);
+            setLastResult(clip);
+            notify("ok", `Edit exported · ${clip.durationSec.toFixed(1)}s`);
+            void refreshClips();
+            setTab("library");
+          }}
+        />
+      )}
 
       {tab === "studio" && (
         <StudioView

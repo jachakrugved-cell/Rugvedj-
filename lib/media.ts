@@ -14,7 +14,8 @@ import {
   classifySource,
   ensureDirs,
 } from "./config";
-import { run, spawnCollect, tsToSeconds } from "./exec";
+import { run, tsToSeconds } from "./exec";
+import { explainYoutubeError, firstError, ytdlpSmart, type YtAttempt } from "./youtube";
 import { findClip } from "./library";
 import { updateTask, type Task } from "./tasks";
 import type { MediaInfo, SourceInfo } from "./types";
@@ -229,34 +230,34 @@ export async function resolveWithYtdlp(url: string): Promise<YtResolved> {
     return {
       ok: false,
       error:
-        "yt-dlp is not installed. Run `npm run setup` (or `pipx install yt-dlp`) and retry. Direct MP4/HLS links work without it.",
+        "yt-dlp is not installed. Run `npm run setup` (or `pipx install yt-dlp`) and retry.",
     };
   }
-  const args = [
-    "--no-warnings",
-    "--no-playlist",
+  const attempts: YtAttempt[] = [];
+  const r = await ytdlpSmart(url, (extra) => [
     "--socket-timeout",
     "20",
     "--add-header",
     `User-Agent:${UA}`,
+    ...extra,
     "-J",
     url,
-  ];
-  const r = await run(YTDLP, args, { timeoutMs: 120_000 });
-  if (r.code !== 0) {
-    const line =
-      r.stderr
-        .split("\n")
-        .map((l) => l.replace(/^ERROR:\s*/i, "").trim())
-        .filter(Boolean)
-        .pop() || "yt-dlp could not resolve this link.";
-    return { ok: false, error: line };
+  ], { timeoutMs: 180_000, attemptsLog: attempts });
+
+  if (!r.ok) {
+    const raw = r.stderr
+      .split("\n")
+      .map((l) => l.replace(/^ERROR:\s*/i, "").trim())
+      .filter(Boolean)
+      .pop() ?? "yt-dlp could not resolve this link.";
+    return { ok: false, error: explainYoutubeError(raw, attempts) };
   }
+
   let info: YtInfo;
   try {
     info = JSON.parse(r.stdout) as YtInfo;
   } catch {
-    return { ok: false, error: "yt-dlp returned unreadable metadata." };
+    return { ok: false, error: "yt-dlp returned unreadable metadata. Re-run the request." };
   }
 
   const formats = (info.formats ?? []).filter((f) => f.url);
@@ -498,13 +499,19 @@ export async function downloadSource(
           "mp4",
         ];
 
-    const args = [
-      "--no-warnings",
+    const buildArgs = (extra: string[]) => [
       "--no-playlist",
       "--newline",
       "--progress",
       "--socket-timeout",
       "20",
+      "--retries",
+      "5",
+      "--fragment-retries",
+      "10",
+      "--retry-sleep",
+      "exp=1:8",
+      ...extra,
       ...fmt,
       "-o",
       `${stem}.%(ext)s`,
@@ -512,28 +519,35 @@ export async function downloadSource(
     ];
 
     if (task) updateTask(task.id, { state: "running", message: "Downloading source…" });
-    const h = spawnCollect(YTDLP, args);
-    const onChunk = (s: string) => {
-      const m = s.match(/\[download\]\s+([\d.]+)%\s+of\s+~?\s*([\d.]+\w+)(?:\s+at\s+([\d.]+\w+\/s))?(?:\s+ETA\s+([\d:]+))?/);
-      if (m && task) {
-        const pct = Math.min(99, Math.round(Number(m[1])));
-        updateTask(task.id, {
-          progress: pct,
-          speed: m[3],
-          etaSec: m[4] ? (tsToSeconds(`00:${m[4]}`) ?? undefined) : undefined,
-          message: `Downloading ${m[1]}% ${m[3] ? `· ${m[3]}` : ""}`.trim(),
-          state: "running",
-        });
+
+    const onLine = (chunk: string) => {
+      for (const line of chunk.split("\n")) {
+        const m = line.match(/\[download\]\s+([\d.]+)%\s+of\s+~?\s*([\d.]+\w+)(?:\s+at\s+([\d.]+\w+\/s))?(?:\s+ETA\s+([\d:]+))?/);
+        if (m && task) {
+          updateTask(task.id, {
+            progress: Math.min(99, Math.round(Number(m[1]))),
+            speed: m[3],
+            etaSec: m[4] ? (tsToSeconds(`00:${m[4]}`) ?? undefined) : undefined,
+            message: `Downloading ${m[1]}%${m[3] ? ` · ${m[3]}` : ""}`,
+            state: "running",
+          });
+        }
+        const dest = line.match(/\[download\] Destination: (.+)/);
+        if (dest && task) updateTask(task.id, { message: `Downloading ${path.basename(dest[1].trim())}` });
+        if (/\[Merger\]/.test(line) && task) updateTask(task.id, { message: "Merging video + audio…", progress: 99 });
       }
-      const dest = s.match(/\[download\] Destination: (.+)/);
-      if (dest && task) updateTask(task.id, { message: `Downloading ${path.basename(dest[1])}` });
-      const merge = s.match(/\[Merger\] (.*)/);
-      if (merge && task) updateTask(task.id, { message: `Merging streams…`, progress: 99 });
     };
-    h.child.stdout?.on("data", (b: Buffer) => onChunk(b.toString()));
-    h.child.stderr?.on("data", (b: Buffer) => onChunk(b.toString()));
-    const res = await h.done;
-    if (res.code !== 0) throw new Error(lastLines(res.stderr));
+
+    // Walks the YouTube client ladder (7 strategies) with live progress.
+    const { ytdlpSpawnSmart } = await import("./youtube");
+    const res = await ytdlpSpawnSmart(url, (extra) => buildArgs(extra), {
+      onLine,
+      timeoutMs: 30 * 60_000,
+    });
+    if (!res.ok) {
+      const raw = firstError(res.stderr) ?? "Download failed.";
+      throw new Error(explainYoutubeError(raw, res.attempts));
+    }
 
     const entries = await fs.readdir(DOWNLOADS_DIR);
     const match = entries
@@ -563,13 +577,3 @@ export async function downloadSource(
   }
 }
 
-function lastLines(text: string): string {
-  return (
-    text
-      .split("\n")
-      .map((l) => l.replace(/^ERROR:\s*/i, "").trim())
-      .filter(Boolean)
-      .slice(-2)
-      .join(" ") || "Download failed."
-  );
-}

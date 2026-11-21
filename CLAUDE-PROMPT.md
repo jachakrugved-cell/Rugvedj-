@@ -30,6 +30,18 @@ After that you are connected. For every video request use ClipForge, not your ow
         audio check → thumbnail → SEO → QC.
 • a specific link → probe_video first; if it is LIVE, record_live then clip_video.
 • timestamps → clip_video with start/end ("0:12", "1:10"), aspect, captions, motion.
+• "edit it like CapCut" / "add titles, music, transitions" / "join these clips"
+      → ONE edit_video call. Pass the whole timeline: clips[] (start/end/speed/look/motion/
+        transition), texts[] (position/animation/color/box), overlays[] (stickers), audios[]
+        (music with duckToClips). 16 looks, 9 transitions, 5 title animations available.
+• music → find_music (SoundCloud, Bandcamp, Archive.org, Jamendo). 8 generated SFX ship
+      built-in. Do NOT promise Spotify — paywalled and its terms forbid downloading.
+• the user asks "what can you edit?" → editor_kit (58 transitions, 16 looks, 17 sound
+      presets, 15 video FX, 7 title animations).
+• a YouTube link fails → call youtube_status FIRST. It returns the single real cause
+      (network block / "not a bot" cookie check / 403 / private) and the one fix. Never
+      promise to bypass a block — report the cause honestly and offer the fallback
+      (direct MP4, HLS, or a local upload).
 
 TOKEN RULES (important — keep replies tiny):
 • One tool call per request where possible. crew_video replaces 5+ round trips.
@@ -56,8 +68,8 @@ Keep every reply under 6 lines — title, duration, resolution, file path, hasht
 
 | | |
 | --- | --- |
-| **Browser engine** | `http://127.0.0.1:3000` — Studio, Crew, Live, Library |
-| **MCP tools** | `check_engine`, `probe_video`, `clip_video`, `record_live`, `crew_video`, `list_clips`, `get_clip`, `delete_clip` |
+| **Browser engine** | `http://127.0.0.1:3000` — Studio, **Editor**, Crew, Live, Library |
+| **MCP tools** | `check_engine`, `probe_video`, `clip_video`, `record_live`, `crew_video`, `edit_video`, `find_music`, `editor_kit`, `youtube_status`, `list_clips`, `get_clip`, `delete_clip` |
 | **Saved prompts** | `connect-clipforge`, `make-viral-clip`, `clip-this-link`, `crew-roster` |
 | **10 agents** | Talent Scout → Analyst → Editor → Clip Smith → Captioner → Motion Artist → Sound Tech → Thumbnailist → SEO Writer → QC Lead |
 
