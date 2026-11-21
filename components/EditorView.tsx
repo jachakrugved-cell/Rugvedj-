@@ -10,12 +10,17 @@ import TimelineEditor, {
   type EditText,
 } from "@/components/TimelineEditor";
 import { Spinner } from "@/components/ui";
+import MusicPanel from "@/components/MusicPanel";
 import { fmtTime } from "@/lib/time";
 import type { ClipRecord } from "@/lib/types";
 
 type Palette = {
   looks: { id: string; label: string }[];
   transitions: string[];
+  transitionLabels: Record<string, string>;
+  sounds: { id: string; label: string }[];
+  fx: { id: string; label: string }[];
+  counts: { transitions: number; looks: number; sounds: number; fx: number; recipes: number };
   motions: string[];
   positions: string[];
   titleAnimations: string[];
@@ -53,6 +58,9 @@ export default function EditorView({
   const [overlays, setOverlays] = useState<EditOverlay[]>([]);
   const [audios, setAudios] = useState<EditAudio[]>([]);
   const [aspect, setAspect] = useState("9:16");
+  const [sound, setSound] = useState("none");
+  const [fx, setFx] = useState("none");
+  const [pitch, setPitch] = useState(0);
   const [title, setTitle] = useState("My edit");
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
   const [playhead, setPlayhead] = useState(0);
@@ -193,6 +201,9 @@ export default function EditorView({
       const body = {
         title,
         aspect,
+        sound,
+        fx,
+        pitch,
         clips: track.map((c) => ({
           source: c.source,
           start: c.start,
@@ -294,8 +305,35 @@ export default function EditorView({
               ))}
             </div>
           </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="min-w-40">
+              <span className="label">Sound</span>
+              <select className="input" value={sound} onChange={(e) => setSound(e.target.value)}>
+                {palette?.sounds.map((s) => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="min-w-36">
+              <span className="label">Video FX</span>
+              <select className="input" value={fx} onChange={(e) => setFx(e.target.value)}>
+                {palette?.fx.map((f) => (
+                  <option key={f.id} value={f.id}>{f.label}</option>
+                ))}
+              </select>
+            </label>
+            <div>
+              <span className="label">Pitch {pitch > 0 ? `+${pitch}` : pitch}</span>
+              <input type="range" min={-12} max={12} step={1} value={pitch} onChange={(e) => setPitch(Number(e.target.value))} className="w-24 accent-[var(--brand)]" />
+            </div>
+          </div>
           <div className="mono ml-auto text-right text-[11px] text-muted">
             <div>{track.length} clips · {texts.length} titles · {overlays.length} stickers · {audios.length} music</div>
+            {palette?.counts && (
+              <div className="text-[10px] text-muted/70">
+                {palette.counts.transitions} transitions · {palette.counts.sounds} sound presets · {palette.counts.fx} video FX
+              </div>
+            )}
             <div className="text-brand-2">{fmtTime(total)} timeline</div>
           </div>
         </div>
@@ -498,8 +536,7 @@ export default function EditorView({
           {/* add music */}
           <div className="border-t border-line pt-3">
             <span className="label">Music / voiceover</span>
-            <AudioPicker
-              clips={clips}
+            <MusicPanel
               onPick={(src, label) =>
                 setAudios((prev) => [
                   ...prev,
@@ -604,7 +641,7 @@ function ClipInspector({ clip, palette, onPatch, onRemove }: { clip: EditClip; p
         <Row label="Transition out">
           <select className="input" value={clip.transition} onChange={(e) => onPatch({ transition: e.target.value })}>
             {palette?.transitions.map((t) => (
-              <option key={t} value={t}>{t}</option>
+              <option key={t} value={t}>{palette.transitionLabels?.[t] ?? t}</option>
             ))}
           </select>
         </Row>
@@ -738,26 +775,6 @@ function AudioInspector({ audio, onPatch, onRemove }: { audio: EditAudio; onPatc
         Delete
       </button>
     </div>
-  );
-}
-
-function AudioPicker({ clips, onPick }: { clips: ClipRecord[]; onPick: (src: string, label: string) => void }) {
-  return (
-    <select
-      className="input"
-      defaultValue=""
-      onChange={(e) => {
-        if (!e.target.value) return;
-        const c = clips.find((x) => x.id === e.target.value);
-        if (c) onPick(`/api/media/${encodeURIComponent(c.fileName)}`, c.title.slice(0, 18));
-        e.target.value = "";
-      }}
-    >
-      <option value="">Pick a clip to use as a music bed…</option>
-      {clips.map((c) => (
-        <option key={c.id} value={c.id}>{c.title}</option>
-      ))}
-    </select>
   );
 }
 

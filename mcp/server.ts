@@ -7,6 +7,8 @@
  *   crew_video    run all 10 specialist agents (find → clip → caption → SEO)
  *   edit_video    CapCut-class multi-clip timeline render (looks, titles, music)
  *   youtube_status is YouTube reachable + which cookie/client mitigation is active
+ *   find_music    search free/CC music (SoundCloud, Bandcamp, Archive.org, Jamendo)
+ *   editor_kit    every transition / look / sound preset / FX the editor supports
  *   probe_video   read any link (page, MP4, HLS, DASH, live) → metadata
  *   clip_video    cut a clip by link or clip id (aspect, captions, styles)
  *   record_live   record N seconds of a live stream to a local MP4
@@ -429,6 +431,73 @@ server.tool(
           "or save a Netscape cookies.txt to .data/cookies.txt. Use a throwaway account.",
         );
       }
+      return text(lines.join("\n"));
+    } catch (err) {
+      return fail(err);
+    }
+  },
+);
+
+server.tool(
+  "find_music",
+  "Search FREE music for a video: SoundCloud, Bandcamp, Archive.org and Jamendo (CC / public-domain catalogues). Returns tracks with licence + credit link, and can download one straight into the media pool for a music bed. Note: Spotify is deliberately not supported — playback needs Premium and its terms forbid downloading.",
+  {
+    query: z.string().describe('Mood/genre, e.g. "lofi study", "epic cinematic trailer"'),
+    sources: z
+      .array(z.enum(["soundcloud", "bandcamp", "archive", "jamendo"]))
+      .optional()
+      .describe("Restrict to specific sources (default: all)"),
+    limit: z.number().min(1).max(25).optional().describe("Max tracks (default 8)"),
+    download: z.string().url().optional().describe("Track URL to download into the media pool for a music bed"),
+  },
+  async (args) => {
+    try {
+      if (args.download) {
+        const r = await engine.requestMusicDownload(args.download);
+        return text(`🎵 Downloaded\nFILE: ${r.fileName}\nUSE: /api/media/${encodeURIComponent(r.fileName)}\n(as a music bed in edit_video audios[].source)`);
+      }
+      const r = await engine.searchMusic(args.query, args.sources, args.limit ?? 8);
+      if (!r.tracks?.length) {
+        const errs = r.errors?.map((e) => `${e.source}: ${e.error}`).join(" · ") ?? "no results";
+        return text(`No free tracks found (${errs}).`);
+      }
+      const lines = r.tracks.map(
+        (t, i) =>
+          `${i + 1}. ${t.artist} — ${t.title}${t.durationSec ? ` (${fmt(t.durationSec)})` : ""}\n   ${t.source} · ${t.license}\n   ${t.url}`,
+      );
+      return text(
+        [`🎵 ${r.tracks.length} free tracks for "${args.query}"`, "", ...lines, "", "Download one with find_music(download=<url>), then use it in edit_video audios[]."].join("\n"),
+      );
+    } catch (err) {
+      return fail(err);
+    }
+  },
+);
+
+server.tool(
+  "editor_kit",
+  "List everything the ClipForge editor can do: all 58 transitions, 16 looks, 17 sound presets, 15 video FX, title animations and one-tap recipes. Call this before promising a specific effect.",
+  {},
+  async () => {
+    try {
+      const p = await engine.studioPalette();
+      const lines = [
+        "🎛 CLIPFORGE EDITOR KIT",
+        "",
+        `TRANSITIONS (${p.transitions.length - 1}): ${p.transitions.filter((t) => t !== "none").join(", ")}`,
+        "",
+        `LOOKS (${p.looks.length}): ${p.looks.map((l) => l.id).join(", ")}`,
+        "",
+        `SOUND PRESETS (${p.sounds?.length ?? 0}): ${(p.sounds ?? []).map((s) => s.id).join(", ")}`,
+        "",
+        `VIDEO FX (${p.fx?.length ?? 0}): ${(p.fx ?? []).map((f) => f.id).join(", ")}`,
+        "",
+        `TITLE ANIMATIONS: ${p.titleAnimations?.join(", ") ?? "fade, slide-up, pop, typewriter, bounce, blur-in"}`,
+        "",
+        `RECIPES (${p.recipes.length}): ${p.recipes.map((r) => `${r.emoji} ${r.label}`).join(" · ")}`,
+        "",
+        "Music: find_music. Everything renders through edit_video.",
+      ];
       return text(lines.join("\n"));
     } catch (err) {
       return fail(err);

@@ -16,6 +16,8 @@ The MCP server is registered in `.mcp.json` as `clipforge`. It exposes:
 | `crew_video` | **run all 10 agents in one call** (find → rank → cut → caption → motion → audio → thumb → SEO → QC) |
 | `edit_video` | **CapCut-class edit in one call** — multi-clip trim/speed/looks/transitions/titles/stickers/music → one MP4 |
 | `youtube_status` | is YouTube reachable, and which cookie/client fix is active? |
+| `find_music` | free/CC music on SoundCloud, Bandcamp, Archive.org, Jamendo → download a bed |
+| `editor_kit` | list all 58 transitions, 16 looks, 17 sounds, 15 FX, recipes |
 | `list_clips` | browse the local library |
 | `get_clip` | full metadata / absolute path of one clip |
 | `delete_clip` | remove a clip from disk + index |
@@ -35,6 +37,7 @@ Then call `check_engine`. The MCP server auto-starts the studio engine at
 
 - Prefer **one** `crew_video` call over a chain of probe/clip calls.
 - When the user says "edit", "cut like CapCut", "add title/music/transition", use **one** `edit_video` call with the whole timeline — do not chain `clip_video` calls.
+- For music, call `find_music` (free/CC sources). Never claim Spotify access — it needs Premium and its terms forbid downloading.
 - If a YouTube link fails, call `youtube_status` **before** retrying. Report the single cause it returns (network block / bot check / 403 / private video) and the one fix — never promise to bypass a block.
 - Reply in ≤6 lines: title, duration, resolution, absolute path, hashtags, QC result.
 - Never echo agent logs or ffmpeg flags. `crew_video` already returns a ~90-token summary.

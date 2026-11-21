@@ -293,6 +293,73 @@ async function main() {
     "no actionable YouTube guidance",
   );
 
+  // ── 9. Effects arsenal + free music ──
+  console.log(`\n${B}9. Effects arsenal + free music${X}`);
+  const kit = await get("/api/studio");
+  check(
+    kit?.sounds?.length - 1 >= 16,
+    `${kit?.sounds?.length - 1} sound presets · ${kit?.fx?.length - 1} video FX`,
+    "sound/FX palettes missing",
+  );
+
+  // Every transition name must be real — ask ffmpeg itself.
+  const xfadeHelp = spawnSync(FFMPEG, ["-hide_banner", "-h", "filter=xfade"], { encoding: "utf8" }).stdout ?? "";
+  const supported = new Set(
+    xfadeHelp
+      .split("\n")
+      .filter((l) => /transition|^\s+[a-z]/.test(l))
+      .join(" ")
+      .split(/[\s,]+/)
+      .map((t) => t.replace(/[^a-z]/g, ""))
+      .filter((t) => t.length > 2),
+  );
+  const declared = (kit?.transitions ?? []).filter((t) => t !== "none");
+  const unknown = declared.filter((t) => !supported.has(t));
+  check(
+    unknown.length === 0,
+    `all ${declared.length} declared transitions exist in this ffmpeg build`,
+    `ffmpeg rejects: ${unknown.join(", ")}`,
+  );
+  check(declared.length >= 58, `${declared.length} transitions exposed in the UI`, `only ${declared.length} transitions`);
+
+  const music = await get("/api/music");
+  check(
+    music?.soundKit?.length >= 6,
+    `sound kit generated: ${music?.soundKit?.map((k) => k.id).join(", ")}`,
+    "sound kit empty",
+  );
+  check(
+    (music?.sources?.length ?? 0) >= 4 && !!music?.note,
+    `free music sources: ${music?.sources?.map((s) => s.label).join(", ")}`,
+    "music catalogue missing",
+  );
+
+  // each generated SFX must be audible, not silence
+  let silent = [];
+  for (const k of music?.soundKit ?? []) {
+    const p = path.join(ROOT, ".data", k.fileName);
+    if (!existsSync(p)) {
+      silent.push(`${k.id}:missing`);
+      continue;
+    }
+    const vd = spawnSync(FFMPEG, ["-hide_banner", "-i", p, "-af", "volumedetect", "-f", "null", "-"], {
+      encoding: "utf8",
+    }).stderr;
+    const mean = Number(vd.match(/mean_volume:\s*(-?[\d.]+) dB/)?.[1] ?? 0);
+    if (mean < -60) silent.push(`${k.id}:${mean}dB`);
+  }
+  check(silent.length === 0, "every sound-kit file is audible", `silent/unreadable: ${silent.join(", ")}`);
+
+  // ── 10. Music search degrades honestly ──
+  console.log(`\n${B}10. Music search${X}`);
+  const found = await post("/api/music", { action: "search", query: "lofi study", limit: 3 }, 120_000);
+  const blocked = (found?.errors ?? []).every((e) => /blocked|cookies|not supported/.test(e.error));
+  check(
+    (found?.tracks?.length ?? 0) > 0 || blocked,
+    found?.tracks?.length ? `search returned ${found.tracks.length} free tracks` : "search blocked but explained per source",
+    `search failed opaquely: ${JSON.stringify(found?.errors ?? found)}`,
+  );
+
   // summary
   console.log("\n" + "─".repeat(52));
   if (failures === 0) {

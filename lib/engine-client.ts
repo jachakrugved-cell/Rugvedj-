@@ -180,10 +180,35 @@ export class EngineClient {
     return this.request<{
       looks: { id: string; label: string }[];
       transitions: string[];
+      transitionLabels: Record<string, string>;
       motions: string[];
+      positions: string[];
+      titleAnimations: string[];
+      sounds: { id: string; label: string }[];
+      fx: { id: string; label: string }[];
+      counts: Record<string, number>;
       recipes: { id: string; label: string; emoji: string; blurb: string }[];
       capabilities: { group: string; items: string[] }[];
     }>("GET", "/api/studio");
+  }
+
+  /** Free/CC music search (SoundCloud, Bandcamp, Archive.org, Jamendo). */
+  searchMusic(query: string, sources?: string[], limit?: number) {
+    return this.request<{
+      ok: boolean;
+      tracks: { id: string; title: string; artist: string; durationSec: number | null; url: string; source: string; license: string }[];
+      errors: { source: string; error: string }[];
+    }>("POST", "/api/music", { action: "search", query, sources, limit }, 180_000);
+  }
+
+  /** Download a track into the media pool for a music bed. */
+  requestMusicDownload(url: string) {
+    return this.request<{ ok: boolean; fileName: string; url: string }>(
+      "POST",
+      "/api/music",
+      { action: "download", url },
+      15 * 60_000,
+    );
   }
 
   /** YouTube reachability + cookie config, for honest diagnostics. */

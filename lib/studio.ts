@@ -42,6 +42,7 @@ export type ClipLayer = {
   zoom?: number; // 1..3 (pushes in on the crop)
   motion?: MotionPreset;
   look?: string; // see LOOKS
+  fx?: string; // per-clip video FX (see VIDEO_FX)
   volume?: number; // 0..2 (per-clip)
   fadeIn?: number;
   fadeOut?: number;
@@ -106,6 +107,12 @@ export type Project = {
   look?: string;
   /** Master volume 0..2 */
   volume?: number;
+  /** Audio treatment applied to the final mix (see SOUND_PRESETS). */
+  sound?: string;
+  /** Video FX applied to the composed picture (see VIDEO_FX). */
+  fx?: string;
+  /** Pitch shift in semitones (-12..12), applied with rubberband. */
+  pitch?: number;
 };
 
 // ───────────────────────────── looks (one-click grades) ─────────────────────────────
@@ -315,6 +322,8 @@ export async function renderProject(project: Project): Promise<StudioResult> {
   const task = createTask({ kind: "clip", title, message: "Preparing timeline…", state: "running" });
 
   try {
+    const { VIDEO_FX } = await import("./effects");
+
     // ── resolve sources ──
     const resolved: Array<{ layer: ClipLayer } & ResolvedSource> = [];
     for (const layer of srcClips) {
@@ -366,12 +375,24 @@ export async function renderProject(project: Project): Promise<StudioResult> {
       }
       const look = LOOKS[c.look ?? project.look ?? "none"]?.chain;
       if (look) chain.push(look);
+      if (c.fx && c.fx !== "none") {
+        const entry = VIDEO_FX[c.fx];
+        if (entry?.chain) chain.push(entry.chain);
+      }
       if (c.fadeIn) chain.push(`fade=t=in:st=0:d=${c.fadeIn}`);
 
       // Timeline length after speed (xfade overlap subtracted in the join loop).
       clipDurations.push(rawLen / Math.max(0.25, c.speed ?? 1));
 
-      filter.push(`[${idx}:v]${chain.join(",")}[c${i}v]`);
+      const clipEntry = c.fx ? VIDEO_FX[c.fx] : undefined;
+      if (clipEntry?.twoPass) {
+        chain.push("split=2[cpA][cpB]");
+        filter.push(`[${idx}:v]${chain.join(",")}`);
+        filter.push(`[cpB]${clipEntry.twoPass.pre}[cpB2]`);
+        filter.push(`[cpA][cpB2]${clipEntry.twoPass.then}[c${i}v]`);
+      } else {
+        filter.push(`[${idx}:v]${chain.join(",")}[c${i}v]`);
+      }
 
       // Clip audio: speed-corrected, optional mute/volume. Silent sources get
       // generated silence so concat + amix always have matching maths.
@@ -414,16 +435,8 @@ export async function renderProject(project: Project): Promise<StudioResult> {
       const trans = prev.transition && prev.transition !== "none" ? prev.transition : null;
       const out = `[v${i}]`;
       if (trans) {
-        const map: Record<string, string> = {
-          fade: "fade",
-          dissolve: "dissolve",
-          wipeleft: "wipeleft",
-          wiperight: "wiperight",
-          slideup: "slideup",
-          slidedown: "slidedown",
-          circle: "circleopen",
-          smooth: "smoothleft",
-        };
+        // Every name here is a real ffmpeg xfade transition (63 of them).
+        const transitionName = prev.transition === "circle" ? "circleopen" : prev.transition;
         // xfade overlap can never exceed either side's duration.
         const maxDur = Math.max(
           0.1,
@@ -431,7 +444,7 @@ export async function renderProject(project: Project): Promise<StudioResult> {
         );
         const offset = Math.max(0, timeline - maxDur);
         filter.push(
-          `${vLabel}[c${i}v]xfade=transition=${map[trans] ?? "fade"}:duration=${maxDur.toFixed(3)}:offset=${offset.toFixed(3)}${out}`,
+          `${vLabel}[c${i}v]xfade=transition=${transitionName}:duration=${maxDur.toFixed(3)}:offset=${offset.toFixed(3)}${out}`,
         );
         timeline = offset + (clipDurations[i] ?? 0);
       } else {
@@ -483,8 +496,18 @@ export async function renderProject(project: Project): Promise<StudioResult> {
       }
     }
 
-    // ── texts + overlays ──
+    // ── project video FX (applied to the composed picture) ──
     let vOut = vLabel;
+    const fxCfg = VIDEO_FX[project.fx ?? "none"];
+    if (fxCfg?.chain) {
+      filter.push(`${vOut}${fxCfg.chain}[vfx]`);
+      vOut = "[vfx]";
+    } else if (fxCfg?.twoPass) {
+      filter.push(`${vOut}split=2[fxA][fxB]`);
+      filter.push(`[fxB]${fxCfg.twoPass.pre}[fxB2]`);
+      filter.push(`[fxA][fxB2]${fxCfg.twoPass.then}[vfx]`);
+      vOut = "[vfx]";
+    }
     const texts = (project.texts ?? []).filter((t) => t?.text?.trim());
     const overlays = (project.overlays ?? []).filter((o) => o?.source);
 

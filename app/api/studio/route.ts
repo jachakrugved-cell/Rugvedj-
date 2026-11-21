@@ -2,7 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { LOOKS, renderProject, validateProject, type Project } from "@/lib/studio";
 import { MOTION_PRESETS } from "@/lib/motion";
-import { TRANSITIONS, TITLE_ANIMATIONS, POSITIONS, ONE_TAP_RECIPES, EDIT_CAPABILITIES } from "@/lib/effects";
+import {
+  TRANSITIONS,
+  TRANSITION_LABELS,
+  TITLE_ANIMATIONS,
+  POSITIONS,
+  ONE_TAP_RECIPES,
+  EDIT_CAPABILITIES,
+  SOUND_PRESETS,
+  VIDEO_FX,
+  TOOLKIT_COUNTS,
+} from "@/lib/effects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +23,10 @@ export async function GET() {
   return NextResponse.json({
     looks: Object.entries(LOOKS).map(([id, v]) => ({ id, label: v.label })),
     transitions: TRANSITIONS,
+    transitionLabels: TRANSITION_LABELS,
+    sounds: Object.entries(SOUND_PRESETS).map(([id, v]) => ({ id, label: v.label })),
+    fx: Object.entries(VIDEO_FX).map(([id, v]) => ({ id, label: v.label })),
+    counts: TOOLKIT_COUNTS,
     motions: MOTION_PRESETS,
     positions: POSITIONS,
     titleAnimations: TITLE_ANIMATIONS,
@@ -34,6 +48,9 @@ const ClipLayer = z.object({
   motion: z.enum(MOTION_PRESETS).optional(),
   look: z.string().optional(),
   volume: z.number().min(0).max(2).optional(),
+  sound: z.string().optional(),
+  fx: z.string().optional(),
+  pitch: z.number().min(-12).max(12).optional(),
   fadeIn: z.number().min(0).max(5).optional(),
   fadeOut: z.number().min(0).max(5).optional(),
   mute: z.boolean().optional(),
@@ -90,6 +107,9 @@ const ProjectBody = z.object({
   fps: z.number().min(10).max(60).optional(),
   look: z.string().optional(),
   volume: z.number().min(0).max(2).optional(),
+  sound: z.string().optional(),
+  fx: z.string().optional(),
+  pitch: z.number().min(-12).max(12).optional(),
   clips: z.array(ClipLayer).min(1).max(40),
   audios: z.array(AudioLayer).max(8).optional(),
   texts: z.array(TextLayer).max(30).optional(),
