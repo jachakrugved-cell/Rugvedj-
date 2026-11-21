@@ -1,17 +1,33 @@
 {
-  "name": "nextjs",
-  "version": "0.1.0",
+  "name": "clipforge",
+  "version": "1.0.0",
   "private": true,
+  "description": "Free, local video clipper \u2014 any link, HLS, or live stream \u2192 clean clips. Ships with a Claude Code MCP connector.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/serve.mjs dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "node scripts/serve.mjs start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "mcp": "tsx mcp/server.ts",
+    "setup": "bash scripts/setup.sh",
+    "doctor": "tsx scripts/doctor.ts",
+    "smoke": "node scripts/smoke.mjs",
+    "demo:live": "node scripts/demo-live.mjs"
   },
   "dependencies": {
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "@ffprobe-installer/linux-x64": "^5.2.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "hls.js": "^1.7.4",
     "next": "16.0.7",
     "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "react-dom": "19.2.1",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -21,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }

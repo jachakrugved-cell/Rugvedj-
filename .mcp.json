@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "clipforge": {
+      "command": "npx",
+      "args": ["-y", "tsx", "mcp/server.ts"],
+      "env": {
+        "CLIPFORGE_ENGINE_URL": "http://127.0.0.1:3000",
+        "CLIPFORGE_AUTOSTART": "1"
+      }
+    }
+  }
+}

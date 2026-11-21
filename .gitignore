@@ -1,0 +1,28 @@
+# deps / build
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# runtime data — clips, downloads, live recordings (yours, never committed)
+.data/
+.tmp/
+
+# toolchain downloaded by `npm run setup`
+.tools/
+.venv/
+
+# env & os
+.env
+.env.local
+.DS_Store
+Thumbs.db
+
+# logs
+npm-debug.log*
+*.log
+
+# generated report HTML is committed via docs/ (source in scripts/report.html)
