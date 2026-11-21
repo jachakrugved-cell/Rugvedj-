@@ -11,7 +11,7 @@
  */
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
-import { existsSync, mkdirSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 
 const ROOT = process.cwd();
@@ -229,6 +229,69 @@ async function main() {
     const qc = crew.agents?.find((a) => a.id === "qc-lead");
     check(qc?.status === "done", "QC lead passed the delivery", `QC failed: ${qc?.output}`);
   }
+
+  // ── 7. Editor: multi-track timeline render ──
+  console.log(`\n${B}7. Editor: multi-track timeline (CapCut-class)${X}`);
+  const pal = await get("/api/studio");
+  check(
+    Array.isArray(pal?.looks) && pal.looks.length >= 16,
+    `editor palette: ${pal?.looks?.length} looks · ${pal?.transitions?.length} transitions · ${pal?.recipes?.length} recipes`,
+    "studio palette missing",
+  );
+
+  // Upload the demo like a real user, then edit it.
+  const demoPath = path.join(ROOT, "public", "demo", "demo-clip.mp4");
+  const fd = new FormData();
+  fd.append("file", new Blob([readFileSync(demoPath)]), "smoke-demo.mp4");
+  const upRes = await fetch(`${BASE}/api/upload`, { method: "POST", body: fd });
+  const up = await upRes.json();
+  check(upRes.ok && !!up.fileName, `uploaded a local file (${up.kind}, ${up.durationSec}s)`, `upload failed: ${up.error}`);
+  const demoSrc = `/api/media/${encodeURIComponent(up.fileName)}`;
+  const editRes = await post(
+    "/api/studio",
+    {
+      title: "Smoke edit",
+      aspect: "9:16",
+      clips: [
+        { source: demoSrc, start: 1, end: 5, look: "vivid", motion: "zoom-in", transition: "dissolve", transitionSec: 0.5 },
+        { source: demoSrc, start: 10, end: 14, look: "cinematic", motion: "pulse", speed: 1.4, transition: "wipeleft" },
+        { source: demoSrc, start: 20, end: 24, look: "noir", motion: "pan-left" },
+      ],
+      texts: [
+        { text: "SMOKE EDIT", at: 0.2, duration: 2.5, position: "top", animation: "pop", box: true },
+        { text: "3 clips · looks · transitions", at: 2.5, duration: 3, position: "center", animation: "slide-up", color: "#4dd4ff" },
+      ],
+      overlays: [{ source: "/emoji/star.png", at: 1, duration: 3, x: 0.8, y: 0.18, width: 0.18, rotate: 15, fade: 0.3 }],
+    },
+    900_000,
+  );
+  check(editRes?.ok === true && !!editRes.clip, "multi-track edit rendered (3 clips + 2 titles + sticker)", `edit failed: ${editRes?.error}`);
+
+  if (editRes?.clip?.file) {
+    const em = ffprobeJson(editRes.clip.file);
+    const ev = em?.streams?.find((s) => s.codec_type === "video");
+    const ea = em?.streams?.find((s) => s.codec_type === "audio");
+    check(ev?.width === 1080 && ev?.height === 1920, `edit is 1080x1920 (${ev?.width}x${ev?.height})`, `unexpected edit size ${ev?.width}x${ev?.height}`);
+    // 4 + 2.86 + 4 = 10.86s of video
+    check(
+      Math.abs(Number(em?.format?.duration) - 10.86) < 1.5,
+      `edit duration correct (${Number(em?.format?.duration).toFixed(2)}s for 3 trimmed clips)`,
+      `edit duration off: ${Number(em?.format?.duration).toFixed(2)}s`,
+    );
+    check(!!ea, "edit has a mixed audio track", "edit audio missing");
+    const poster = await fetch(`${BASE}/api/clips/${editRes.clip.id}/file?poster=1`);
+    check(poster.status === 200, "edit poster frame served", `poster returned ${poster.status}`);
+  }
+
+  // ── 8. YouTube diagnostics ──
+  console.log(`\n${B}8. YouTube diagnostics${X}`);
+  const yt = await get("/api/youtube");
+  check(typeof yt?.reachable === "boolean", `YouTube diagnosis: ${yt?.reachable ? "reachable" : "blocked"} (cookies: ${yt?.cookies})`, "youtube doctor did not answer");
+  check(
+    yt?.reachable || (yt?.hint?.length ?? 0) > 40,
+    yt?.reachable ? "YouTube usable from this machine" : "blocked network explained with a concrete fix",
+    "no actionable YouTube guidance",
+  );
 
   // summary
   console.log("\n" + "─".repeat(52));

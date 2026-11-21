@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ClipCard from "@/components/ClipCard";
 import HlsPlayer from "@/components/HlsPlayer";
 import Timeline from "@/components/Timeline";
@@ -134,6 +134,8 @@ export default function StudioView(props: StudioProps) {
               {loading ? <Spinner /> : "Load video"}
             </button>
           </div>
+          <YoutubeBanner />
+
           {probeError && (
             <p className="mt-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
               {probeError}
@@ -458,5 +460,61 @@ export default function StudioView(props: StudioProps) {
         </div>
       </aside>
     </main>
+  );
+}
+
+/**
+ * YouTube reachability banner. Yes, it is blunt on purpose: when the network
+ * drops YouTube at the firewall there is nothing ClipForge can do, and the
+ * user deserves to know that instead of a mystery spinner.
+ */
+function YoutubeBanner() {
+  const [state, setState] = useState<{
+    reachable: boolean;
+    hint: string;
+    cookies: string;
+    version?: string;
+  } | null>(null);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/youtube")
+      .then((r) => r.json())
+      .then((d) => alive && setState(d))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  if (!state || state.reachable) return null;
+
+  return (
+    <div className="mb-3 rounded-xl border border-amber-400/35 bg-amber-400/10 px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="text-xs font-semibold text-amber-200">⚠ YouTube unreachable from this machine</span>
+        <span className="mono text-[10.5px] text-amber-200/70">yt-dlp {state.version ?? "?"} · cookies: {state.cookies}</span>
+        <button
+          type="button"
+          className="ml-auto text-[11px] font-medium text-amber-200 underline underline-offset-2"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? "hide" : "why + fix"}
+        </button>
+      </div>
+      {open && (
+        <div className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-amber-100/80">
+          <p>{state.hint}</p>
+          <p className="text-amber-100/60">
+            Distinct from a network block: &ldquo;Sign in to confirm you&rsquo;re not a bot&rdquo;. That one is a YouTube
+            session check — fix it with cookies (<span className="mono">YTDLP_COOKIES_FROM_BROWSER=chrome</span>, or a
+            <span className="mono"> cookies.txt </span> in <span className="mono">.data/</span>). ClipForge already
+            retries 8 player clients automatically.
+          </p>
+          <p className="text-amber-100/50">Everything else still works: direct MP4, HLS/live links, and local uploads.</p>
+        </div>
+      )}
+    </div>
   );
 }

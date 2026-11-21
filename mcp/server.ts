@@ -5,6 +5,8 @@
  * Tools:
  *   check_engine  ping the engine, report ffmpeg / ffprobe / yt-dlp status
  *   crew_video    run all 10 specialist agents (find → clip → caption → SEO)
+ *   edit_video    CapCut-class multi-clip timeline render (looks, titles, music)
+ *   youtube_status is YouTube reachable + which cookie/client mitigation is active
  *   probe_video   read any link (page, MP4, HLS, DASH, live) → metadata
  *   clip_video    cut a clip by link or clip id (aspect, captions, styles)
  *   record_live   record N seconds of a live stream to a local MP4
@@ -302,6 +304,132 @@ server.tool(
         crew.thumbnail ? `THUMB: ${crew.thumbnail.file}` : "",
       ];
       return text(lines.filter(Boolean).join("\n"));
+    } catch (err) {
+      return fail(err);
+    }
+  },
+);
+
+server.tool(
+  "edit_video",
+  "CapCut-class editor in ONE call. Builds a multi-clip timeline: per-clip trim, speed, reverse, zoom, 16 looks, 8 motions, 9 transitions, free-positioned titles with animations, sticker overlays, music beds with auto-ducking — then renders one MP4. Prefer this over clip_video when the user asks to EDIT, not just cut.",
+  {
+    title: z.string().optional().describe("Output name, e.g. \"Gym motivation cut\""),
+    aspect: z.enum(["9:16", "1:1", "4:5", "16:9", "4:3"]).optional().describe("Frame (default 9:16)"),
+    clips: z
+      .array(
+        z.object({
+          source: z.string().describe("Video link, /api/media/<file>, or clip id"),
+          start: z.number().optional().describe("In-point seconds (default 0)"),
+          end: z.number().optional().describe("Out-point seconds"),
+          speed: z.number().optional().describe("0.25–4× (default 1)"),
+          reverse: z.boolean().optional(),
+          zoom: z.number().optional().describe("1–3× push-in"),
+          look: z.string().optional().describe("Grade: warm|cool|cinematic|vintage|bw|sepia|vivid|soft|dreamy|noir|neon|sunset|matrix|crisp|fadey|none"),
+          motion: z.enum(["none", "zoom-in", "zoom-out", "pan-left", "pan-right", "shake", "pulse", "whip"]).optional(),
+          volume: z.number().optional().describe("0–2 (default 1)"),
+          mute: z.boolean().optional(),
+          transition: z.enum(["none", "fade", "dissolve", "wipeleft", "wiperight", "slideup", "slidedown", "circle", "smooth"]).optional().describe("Transition into the next clip"),
+          transitionSec: z.number().optional().describe("0.1–2 s (default 0.4)"),
+        }),
+      )
+      .describe("Ordered video segments"),
+    texts: z
+      .array(
+        z.object({
+          text: z.string(),
+          at: z.number().optional().describe("Start second"),
+          duration: z.number().optional().describe("Seconds (default 3)"),
+          position: z.enum(["top", "center", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"]).optional(),
+          x: z.number().optional().describe("0–1 exact override"),
+          y: z.number().optional(),
+          size: z.number().optional().describe("Font px (auto if omitted)"),
+          color: z.string().optional().describe("#rrggbb"),
+          box: z.boolean().optional(),
+          animation: z.enum(["none", "fade", "slide-up", "pop", "typewriter"]).optional(),
+        }),
+      )
+      .optional()
+      .describe("Titles / lower-thirds / captions"),
+    audios: z
+      .array(
+        z.object({
+          source: z.string(),
+          at: z.number().optional(),
+          volume: z.number().optional().describe("0–2 (default 0.35)"),
+          loop: z.boolean().optional(),
+          duckToClips: z.boolean().optional().describe("Lower music under dialogue"),
+        }),
+      )
+      .optional()
+      .describe("Music / voiceover beds"),
+    overlays: z
+      .array(
+        z.object({
+          source: z.string().describe("Sticker image URL or /emoji/star.png"),
+          at: z.number().optional(),
+          duration: z.number().optional(),
+          x: z.number().optional().describe("0–1 centre"),
+          y: z.number().optional(),
+          width: z.number().optional().describe("Fraction of frame width"),
+          opacity: z.number().optional(),
+          rotate: z.number().optional().describe("Degrees"),
+          fade: z.number().optional(),
+        }),
+      )
+      .optional()
+      .describe("Stickers / logos / emoji"),
+  },
+  async (args) => {
+    try {
+      const res = await engine.renderStudio({
+        title: args.title,
+        aspect: args.aspect ?? "9:16",
+        clips: args.clips,
+        texts: args.texts,
+        audios: args.audios,
+        overlays: args.overlays,
+      });
+      const c = res.clip;
+      const lines = [
+        "🎬 EDIT RENDERED",
+        `${c.title} · ${fmt(c.durationSec)} · ${c.meta?.width}×${c.meta?.height} · ${(c.sizeBytes / 1e6).toFixed(1)} MB`,
+        `${args.clips.length} clip(s) · ${args.texts?.length ?? 0} title(s) · ${args.overlays?.length ?? 0} sticker(s) · ${args.audios?.length ?? 0} audio bed(s)`,
+        `FILE: ${c.file}`,
+        `OPEN: ${engine.baseUrl}/ (Library tab) · id=${c.id}`,
+      ];
+      return text(lines.join("\n"));
+    } catch (err) {
+      return fail(err);
+    }
+  },
+);
+
+server.tool(
+  "youtube_status",
+  "Check whether YouTube is actually reachable from this machine and which mitigation is active (cookies file / browser jar / none). Run this FIRST when a YouTube link fails — it separates network blocks from bot checks.",
+  {},
+  async () => {
+    try {
+      const d = await engine.youtubeDoctor();
+      const lines = [
+        d.reachable ? "✅ YouTube reachable" : "❌ YouTube NOT reachable",
+        `yt-dlp: ${d.version ?? "unknown"}`,
+        `cookies: ${d.cookies}`,
+        `player clients tried: ${d.clients.join(", ")}`,
+        "",
+        d.reachable
+          ? "Single-video failures are then video-specific (private, region-locked, age-gated)."
+          : d.detail,
+      ];
+      if (!d.reachable && d.cookies === "none") {
+        lines.push(
+          "",
+          "To add a session: set YTDLP_COOKIES_FROM_BROWSER=chrome (or firefox/edge/safari),",
+          "or save a Netscape cookies.txt to .data/cookies.txt. Use a throwaway account.",
+        );
+      }
+      return text(lines.join("\n"));
     } catch (err) {
       return fail(err);
     }

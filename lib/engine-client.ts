@@ -165,6 +165,38 @@ export class EngineClient {
     );
   }
 
+  /** Render a studio project (multi-clip timeline) via the engine. */
+  renderStudio(project: unknown) {
+    return this.request<{ ok: boolean; clip: ClipRecord; url: string; poster: string }>(
+      "POST",
+      "/api/studio",
+      project,
+      60 * 60_000,
+    );
+  }
+
+  /** Palette + capabilities for the editor. */
+  studioPalette() {
+    return this.request<{
+      looks: { id: string; label: string }[];
+      transitions: string[];
+      motions: string[];
+      recipes: { id: string; label: string; emoji: string; blurb: string }[];
+      capabilities: { group: string; items: string[] }[];
+    }>("GET", "/api/studio");
+  }
+
+  /** YouTube reachability + cookie config, for honest diagnostics. */
+  youtubeDoctor() {
+    return this.request<{
+      reachable: boolean;
+      detail: string;
+      cookies: "file" | "browser" | "none";
+      clients: string[];
+      version?: string;
+    }>("GET", "/api/youtube", undefined, 120_000);
+  }
+
   listClips() {
     return this.request<{ clips: ClipRecord[] }>("GET", "/api/clips");
   }
