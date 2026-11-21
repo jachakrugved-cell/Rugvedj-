@@ -9,6 +9,16 @@ export const maxDuration = 1800;
 
 const Aspect = z.enum(["original", "9:16", "1:1", "4:5", "16:9", "4:3"]);
 const Style = z.enum(["clean", "bold", "karaoke", "highlight", "neon", "minimal"]);
+const Motion = z.enum(["none", "zoom-in", "zoom-out", "pan-left", "pan-right", "shake", "pulse", "whip"]);
+const Template = z.enum([
+  "shorts-hook",
+  "reels-clean",
+  "tiktok-karaoke",
+  "podcast-clip",
+  "cinematic",
+  "square-proof",
+  "raw",
+]);
 
 const Body = z.object({
   source: z.string().min(1),
@@ -22,6 +32,10 @@ const Body = z.object({
   captionStyle: Style.optional(),
   reencode: z.boolean().optional(),
   filename: z.string().optional(),
+  /** One-word edit style: aspect + motion + captions. */
+  template: Template.optional(),
+  motion: Motion.optional(),
+  grade: z.enum(["off", "light", "cinematic"]).optional(),
 });
 
 /** GET /api/clips — the library. */
@@ -78,6 +92,9 @@ export async function POST(req: NextRequest) {
       captionStyle: b.captionStyle,
       forceReencode: b.reencode,
       filename: b.filename,
+      template: b.template,
+      motion: b.motion,
+      grade: b.grade,
     });
     return NextResponse.json({ ok: true, clip, task });
   } catch (err) {

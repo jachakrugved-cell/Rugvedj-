@@ -24,3 +24,5 @@ Thumbs.db
 # logs
 npm-debug.log*
 *.log
+
+# generated report HTML is committed via docs/ (source in scripts/report.html)

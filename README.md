@@ -7,9 +7,14 @@ No accounts, no credits, no watermarks, no uploads. Just ffmpeg on your machine,
 plus an **MCP server so Claude Code can clip for you**.
 
 ```
-any link ──▶ resolve ──▶ preview ──▶ pick in/out ──▶ MP4 on your disk
-             (YouTube, Vimeo, Twitch, MP4, HLS/DASH, live streams)
+                 ┌──────────── CREW · 10 agents ────────────┐
+any link  ──▶    │ scout → rank → edit → cut → caption →    │  ──▶  MP4 + captions
+(live too)       │ motion → audio → thumb → SEO → QC        │       + hashtags + QC
+                 └──────────────────────────────────────────┘
 ```
+
+**→ [Service report](docs/report.html)** (colourful, printable, with real output images) ·
+**→ [Paste-into-Claude prompt](CLAUDE-PROMPT.md)** · live at `http://127.0.0.1:3000/report`
 
 ---
 
@@ -22,7 +27,8 @@ npm run setup      # downloads portable ffmpeg + yt-dlp into .tools/ (no sudo)
 npm run dev        # → http://127.0.0.1:3000
 ```
 
-Then paste a link in the Studio tab, drag the handles, and hit **Cut clip**.
+Then either paste a link in **Studio** and drag the handles, or open **Crew**, type a topic
+(*"viral cat shorts"*), and let the 10 agents deliver a finished clip.
 
 **Connect Claude Code** (one command, from the repo root):
 
@@ -47,6 +53,9 @@ That's it — no API keys, no cloud.
 | **Any moment** | Scrub timeline with dual in/out handles, timecode inputs (`90`, `1:30`, `01:02:03`), quick actions, preview frames |
 | **Social formats** | 9:16, 1:1, 4:5, 16:9, 4:3 — smart center-crop to fill, 1080-class output |
 | **Captions** | Burned in with libass: 6 styles (clean, bold, karaoke, highlight, neon, minimal). Paste SRT/VTT for exact sync, or plain text and ClipForge times it for you |
+| **10-agent crew** | Talent Scout → Analyst → Editor → Clip Smith → Captioner → Motion Artist → Sound Tech → Thumbnailist → SEO Writer → QC Lead — all in one call |
+| **Motion** | 8 camera presets (zoom in/out, pan, shake, pulse, whip) + a light cinematic grade |
+| **Templates** | `shorts-hook`, `tiktok-karaoke`, `reels-clean`, `podcast-clip`, `cinematic`, `square-proof`, `raw` — one word sets aspect + motion + caption style |
 | **Fast** | Stream-copy cuts when possible (keyframe-aware), full re-encode only when cropping or adding captions |
 | **Local & free** | Everything lands in `.data/`; nothing leaves your machine. MIT licensed |
 
@@ -94,9 +103,21 @@ If the engine isn't running, it starts it for you (`CLIPFORGE_AUTOSTART=1`).
 | `probe_video` | Any link → title, duration, resolution, fps, **is-live**, playable? |
 | `clip_video` | Cut a clip by link or clip id; aspect, captions, styles |
 | `record_live` | Record N seconds of a live stream to a local MP4 |
+| `crew_video` | **Runs all 10 agents in one call** — search → rank → cut → caption → motion → audio → thumb → SEO → QC |
 | `list_clips` | Browse the library |
 | `get_clip` | Full metadata + absolute path |
 | `delete_clip` | Delete file + index entry |
+
+### 2b. Saved prompts (low-token shortcuts)
+
+| Prompt | Arguments | What it does |
+| --- | --- | --- |
+| `connect-clipforge` | — | Verifies the engine and reports in one line |
+| `make-viral-clip` | `topic`, `template?`, `caption_text?` | One call to `crew_video`, 6-line reply |
+| `clip-this-link` | `link`, `start?`, `end?`, `template?` | Probe → (record if live) → clip |
+| `crew-roster` | — | Compact table of the 10 agents |
+
+They keep the conversation short: the engine expands the plan, so Claude never re-derives it.
 
 ### 3. Things to say
 
@@ -107,6 +128,8 @@ Clip https://youtu.be/dQw4w9WgXcQ from 0:42 to 1:10 as a 9:16 clip with bold cap
 
 This stream is live — https://example.com/live.m3u8 — record 60 seconds,
 then cut the most interesting 15 seconds as a square clip.
+
+Find a viral clip about gym transformations and edit it for TikTok.
 
 List my clips, and delete anything older than a week.
 ```
@@ -156,6 +179,10 @@ curl -s localhost:3000/api/clips -H 'content-type: application/json' \
 curl -s localhost:3000/api/live -H 'content-type: application/json' \
   -d '{"url":"https://example.com/live.m3u8","durationSec":60}'
 
+# find + edit in one call (10 agents)
+curl -s localhost:3000/api/crew -H 'content-type: application/json' \
+  -d '{"theme":"viral cat shorts","template":"shorts-hook","platform":"tiktok"}'
+
 # library
 curl -s localhost:3000/api/clips
 
@@ -166,6 +193,8 @@ curl -N localhost:3000/api/tasks?stream=1
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Binaries, data dir, capabilities |
+| `GET` | `/api/crew` | Roster of the 10 agents + templates + motion presets |
+| `POST` | `/api/crew` | Run the whole pipeline — find, edit, caption, SEO, QC |
 | `POST` | `/api/probe` | Resolve any link |
 | `POST` | `/api/clips` | Create a clip |
 | `GET` | `/api/clips` | List library |

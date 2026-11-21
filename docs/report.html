@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ClipForge — Service Report · Rugved.pvt.ltd</title>
+<style>
+  :root {
+    --ink: #0b0d14;
+    --paper: #f7f7fb;
+    --violet: #7c5cff;
+    --cyan: #00c2ff;
+    --pink: #ff4d8d;
+    --lime: #9dff4d;
+    --amber: #ffb020;
+    --muted: #5c6478;
+    --line: #e4e6f0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #0b0d14;
+    font-family: "Inter", -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto 16px;
+    background: var(--paper);
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  /* ── cover ── */
+  .cover {
+    background:
+      radial-gradient(900px 500px at 8% -10%, rgba(124, 92, 255, 0.55), transparent 60%),
+      radial-gradient(800px 500px at 105% 8%, rgba(0, 194, 255, 0.42), transparent 60%),
+      radial-gradient(700px 480px at 50% 115%, rgba(255, 77, 141, 0.4), transparent 60%),
+      #090b12;
+    color: #fff;
+    padding: 0;
+  }
+  .cover .inner { padding: 22mm 18mm; display: flex; flex-direction: column; height: 100%; }
+  .brandrow { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 46px; height: 46px; border-radius: 13px;
+    background: linear-gradient(135deg, var(--violet), var(--cyan));
+    display: grid; place-items: center; font-size: 22px; font-weight: 900; color: #08101a;
+  }
+  .brandrow h1 { margin: 0; font-size: 30px; letter-spacing: -0.02em; }
+  .brandrow small { display: block; font-size: 10px; letter-spacing: 0.28em; color: #b9c0d8; text-transform: uppercase; margin-top: 2px; }
+  .cover .kicker { margin-top: 30mm; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: #a8b2ff; }
+  .cover h2 { font-size: 40px; line-height: 1.06; margin: 4mm 0 4mm; letter-spacing: -0.02em; max-width: 160mm; }
+  .cover h2 em { font-style: normal; background: linear-gradient(90deg, var(--lime), var(--cyan)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .cover p.lead { font-size: 12.5px; line-height: 1.65; color: #c9cee3; max-width: 155mm; }
+  .cover .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7mm; }
+  .badge { font-size: 10px; font-weight: 600; padding: 4px 9px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.07); color: #eef0ff; }
+  .badge.hot { background: linear-gradient(90deg, var(--pink), var(--amber)); color: #1a0710; border: 0; }
+  .cover .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10px; color: #8f97b3; }
+  .cover .foot b { color: #fff; font-size: 12px; display: block; }
+
+  /* ── generic pages ── */
+  .pad { padding: 16mm 16mm 12mm; flex: 1; display: flex; flex-direction: column; }
+  .phead { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--line); padding-bottom: 4mm; margin-bottom: 6mm; }
+  .phead h3 { margin: 0; font-size: 22px; letter-spacing: -0.015em; }
+  .phead .tag { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .pfoot { margin-top: auto; padding-top: 5mm; border-top: 1px solid var(--line); display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); }
+
+  h4 { margin: 0 0 2mm; font-size: 12px; }
+  p { margin: 0 0 2.5mm; font-size: 10.5px; line-height: 1.6; color: #2a3042; }
+  .muted { color: var(--muted); }
+
+  .grid { display: grid; gap: 5mm; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card {
+    border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 4mm;
+  }
+  .card.tint-v { background: linear-gradient(160deg, #f3f0ff, #fff 70%); border-color: #e0d9ff; }
+  .card.tint-c { background: linear-gradient(160deg, #eefbff, #fff 70%); border-color: #cdefff; }
+  .card.tint-p { background: linear-gradient(160deg, #fff0f6, #fff 70%); border-color: #ffd6e6; }
+  .card.tint-l { background: linear-gradient(160deg, #f4ffe9, #fff 70%); border-color: #ddffbf; }
+  .card.tint-a { background: linear-gradient(160deg, #fff8e8, #fff 70%); border-color: #ffe7b8; }
+  .card h4 { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 99px; display: inline-block; }
+  .dot.v { background: var(--violet); } .dot.c { background: var(--cyan); } .dot.p { background: var(--pink); }
+  .dot.l { background: #6fce00; } .dot.a { background: var(--amber); }
+
+  /* agent table */
+  table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+  th { text-align: left; font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 2mm 2mm; border-bottom: 1.5px solid var(--line); }
+  td { padding: 2.2mm 2mm; border-bottom: 1px solid #eef0f6; vertical-align: top; }
+  td.n { font-weight: 800; color: #fff; }
+  .num {
+    display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px;
+    font-size: 9px; font-weight: 800; color: #fff;
+  }
+  .n1 { background: var(--violet); } .n2 { background: #5f7cff; } .n3 { background: var(--cyan); }
+  .n4 { background: #00b8a3; } .n5 { background: #34c759; } .n6 { background: #8ac926; }
+  .n7 { background: var(--amber); } .n8 { background: #ff7a45; } .n9 { background: var(--pink); }
+  .n10 { background: #b45cff; }
+  td.name { font-weight: 700; }
+
+  /* images */
+  figure { margin: 0; }
+  figure img { width: 100%; border-radius: 8px; display: block; border: 1px solid var(--line); }
+  figcaption { font-size: 8.5px; color: var(--muted); margin-top: 1.5mm; }
+
+  .statrow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; }
+  .stat { border-radius: 10px; padding: 4mm; color: #fff; }
+  .stat b { display: block; font-size: 24px; letter-spacing: -0.03em; line-height: 1; }
+  .stat span { font-size: 8.5px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; }
+  .s1 { background: linear-gradient(135deg, #7c5cff, #a78bff); }
+  .s2 { background: linear-gradient(135deg, #00b8e6, #4dd4ff); }
+  .s3 { background: linear-gradient(135deg, #ff4d8d, #ff8fb8); }
+  .s4 { background: linear-gradient(135deg, #6fce00, #b6ff4d); color: #0d1500; }
+
+  .steps { counter-reset: step; display: grid; gap: 3mm; }
+  .step { counter-increment: step; position: relative; padding-left: 12mm; font-size: 10px; line-height: 1.55; }
+  .step::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0; width: 7mm; height: 7mm; border-radius: 50%;
+    background: linear-gradient(135deg, var(--violet), var(--cyan)); color: #fff; font-weight: 800;
+    display: grid; place-items: center; font-size: 9px;
+  }
+  code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.6px; background: #eef0f8; padding: 1px 4px; border-radius: 4px; }
+  pre { background: #0e1220; color: #d7e3ff; border-radius: 8px; padding: 3.5mm; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.4px; line-height: 1.55; overflow: hidden; margin: 0 0 3mm; }
+  pre .g { color: #9dff4d; } pre .c { color: #7fb7ff; } pre .m { color: #8b93a7; }
+  .pill { display: inline-block; font-size: 8.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: #eef0f8; color: #3b4157; }
+  .pill.v { background: #efeaff; color: #5b3fd6; } .pill.c { background: #e6f9ff; color: #00799e; }
+  .pill.p { background: #ffe9f1; color: #c21f59; } .pill.l { background: #f0ffe3; color: #3f7a00; }
+  .divider { height: 1px; background: var(--line); margin: 4mm 0; }
+  .quotebox { border-left: 3px solid var(--violet); background: #f6f4ff; border-radius: 0 8px 8px 0; padding: 3mm 4mm; font-size: 10px; font-style: italic; color: #3d3363; }
+  .tagline { font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: #aeb4c7; }
+  @page { size: A4; margin: 0; }
+  @media print { body { background: #fff; } .page { margin: 0; } }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════ COVER ══════════════════════ -->
+<section class="page cover">
+  <div class="inner">
+    <div class="brandrow">
+      <div class="logo">✂</div>
+      <div>
+        <h1>ClipForge</h1>
+        <small>by Rugved.pvt.ltd</small>
+      </div>
+    </div>
+
+    <div class="kicker">Service report · 2026</div>
+    <h2>Find the viral moment.<br /><em>Cut it, caption it, move it.</em></h2>
+    <p class="lead">
+      One paste. Ten specialist agents. A finished vertical clip with burned-in captions, camera
+      motion and a platform-ready caption pack — produced entirely on your own machine, for free,
+      with unlimited clips. ClipForge plugs straight into Claude Code and gives it a browser
+      engine to search, edit and deliver video.
+    </p>
+
+    <div class="badges">
+      <span class="badge hot">FREE · UNLIMITED</span>
+      <span class="badge">100% local</span>
+      <span class="badge">YouTube → clip</span>
+      <span class="badge">Live streams</span>
+      <span class="badge">10 agents</span>
+      <span class="badge">Claude Code MCP</span>
+      <span class="badge">No watermark</span>
+    </div>
+
+    <div class="foot">
+      <div><b>Rugved.pvt.ltd</b>Product · engineering · design</div>
+      <div style="text-align: right"><b>clipforge</b>MIT licensed · v1.0</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ 1 · WHAT IT IS ══════════════════════ -->
+<section class="page">
+  <div class="pad">
+    <div class="phead">
+      <div>
+        <div class="tag">01 · Overview</div>
+        <h3>What ClipForge does</h3>
+      </div>
+      <span class="pill v">service summary</span>
+    </div>
+
+    <p style="font-size:11.5px">
+      ClipForge is a <b>free, unlimited video clipping studio</b> that runs on the user's own computer.
+      Paste any video link — a YouTube video, a Vimeo page, a Twitch stream, a direct MP4 or a live
+      HLS feed — choose a moment, and get a clean MP4 with captions and motion, ready for Shorts,
+      Reels or TikTok. Nothing is uploaded, there are no credits, and there is no watermark.
+    </p>
+
+    <div class="statrow" style="margin: 5mm 0">
+      <div class="stat s1"><b>10</b><span>specialist agents</span></div>
+      <div class="stat s2"><b>8</b><span>motion presets</span></div>
+      <div class="stat s3"><b>6</b><span>caption styles</span></div>
+      <div class="stat s4"><b>0₹</b><span>per clip</span></div>
+    </div>
+
+    <figure style="margin-bottom:5mm">
+      <img src="img/06-collage.jpg" alt="ClipForge interface, a finished 9:16 clip, and caption/motion samples" />
+      <figcaption>Real output from this build: the studio interface, a finished 9:16 crew clip, six caption styles and motion samples.</figcaption>
+    </figure>
+
+    <div class="grid g2">
+      <div class="card tint-v">
+        <h4><span class="dot v"></span> Input — paste any link</h4>
+        <p class="muted" style="margin:0">
+          YouTube · Vimeo · Twitch · Kick · Facebook · X pages (via yt-dlp),
+          direct MP4 / WebM / MOV files, HLS <code>.m3u8</code>, DASH <code>.mpd</code>,
+          and live streams.
+        </p>
+      </div>
+      <div class="card tint-c">
+        <h4><span class="dot c"></span> Output — post-ready MP4</h4>
+        <p class="muted" style="margin:0">
+          9:16 / 1:1 / 4:5 / 16:9 / 4:3 with smart centre-crop, burned-in captions,
+          camera motion and a light grade. 1080-class vertical, H.264 + AAC.
+        </p>
+      </div>
+      <div class="card tint-p">
+        <h4><span class="dot p"></span> Live video</h4>
+        <p class="muted" style="margin:0">
+          Detects live HLS/DASH and page lives, previews them through a local proxy, records
+          N seconds from the live edge, then clips that buffer.
+        </p>
+      </div>
+      <div class="card tint-l">
+        <h4><span class="dot l"></span> Claude connection</h4>
+        <p class="muted" style="margin:0">
+          One MCP server gives Claude Code a browser engine plus 8 tools and 4 saved prompts —
+          so “find a viral cat clip and edit it” becomes one call.
+        </p>
+      </div>
+    </div>
+
+    <div class="pfoot">
+      <span>ClipForge · service report</span><span>Rugved.pvt.ltd · 2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ 2 · THE CREW ══════════════════════ -->
+<section class="page">
+  <div class="pad">
+    <div class="phead">
+      <div>
+        <div class="tag">02 · The crew</div>
+        <h3>10 agents that make the video</h3>
+      </div>
+      <span class="pill p">find → edit → deliver</span>
+    </div>
+
+    <p>
+      Every clip is produced by a ten-agent pipeline. Each agent owns one job and returns a compact
+      result, so the whole production costs about <b>90 tokens of Claude context</b> while the heavy
+      work happens in the engine.
+    </p>
+
+    <table style="margin-top:3mm">
+      <thead>
+        <tr><th style="width:8%">#</th><th style="width:22%">Agent</th><th style="width:30%">Job</th><th>What it produces</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="num n1">1</span></td><td class="name">Talent Scout</td><td>Finds candidate videos</td><td>Candidates from YouTube search or the user's link.</td></tr>
+        <tr><td><span class="num n2">2</span></td><td class="name">Analyst</td><td>Ranks the candidates</td><td>Duration, resolution, audio, vertical-ness, virality score.</td></tr>
+        <tr><td><span class="num n3">3</span></td><td class="name">Editor</td><td>Picks the moment</td><td>In/out window: skips intros/outros or obeys given timestamps.</td></tr>
+        <tr><td><span class="num n4">4</span></td><td class="name">Clip Smith</td><td>Cuts the clip</td><td>Keyframe-aware copy or x264 cut, framed for the platform.</td></tr>
+        <tr><td><span class="num n5">5</span></td><td class="name">Captioner</td><td>Writes + burns captions</td><td>ASS subtitles in the chosen style, word-timed on request.</td></tr>
+        <tr><td><span class="num n6">6</span></td><td class="name">Motion Artist</td><td>Adds movement</td><td>Zoom, pan, shake, pulse or whip + light cinematic grade.</td></tr>
+        <tr><td><span class="num n7">7</span></td><td class="name">Sound Tech</td><td>Checks the audio</td><td>Audio-track verification and EBU R128 loudness reading.</td></tr>
+        <tr><td><span class="num n8">8</span></td><td class="name">Thumbnailist</td><td>Makes the poster frame</td><td>Hook-frame JPEG for thumbnails and previews.</td></tr>
+        <tr><td><span class="num n9">9</span></td><td class="name">SEO Writer</td><td>Packages the post</td><td>Title, description, hashtags, best posting time.</td></tr>
+        <tr><td><span class="num n10">10</span></td><td class="name">QC Lead</td><td>Verifies the delivery</td><td>Duration, size and audio/video tracks — blocks broken exports.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="divider"></div>
+    <div class="quotebox">
+      “Find a viral clip about gym transformations and edit it for TikTok.”<br />
+      → the crew searches, ranks, cuts, captions, adds motion, checks audio, writes the caption pack
+      and hands back a verified MP4. One sentence in, one finished clip out.
+    </div>
+
+    <div class="pfoot">
+      <span>ClipForge · the crew</span><span>Rugved.pvt.ltd · 2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ 3 · CAPTIONS + MOTION ══════════════════════ -->
+<section class="page">
+  <div class="pad">
+    <div class="phead">
+      <div>
+        <div class="tag">03 · The edit</div>
+        <h3>Captions that read, motion that moves</h3>
+      </div>
+      <span class="pill c">burned in · no overlays</span>
+    </div>
+
+    <figure style="margin-bottom:5mm">
+      <img src="img/02-captions.jpg" alt="Six caption styles rendered by the engine" />
+      <figcaption>Six burned-in caption styles rendered by libass: clean, bold, karaoke, highlight, neon, minimal.</figcaption>
+    </figure>
+
+    <div class="grid g2" style="margin-bottom:5mm">
+      <div class="card">
+        <h4>Caption pipeline</h4>
+        <p class="muted" style="margin:0">
+          Paste an SRT/VTT file for exact sync, or plain lines — the engine times each line across
+          the clip, wraps it to the frame and animates it in. Six visual styles, no external service.
+        </p>
+      </div>
+      <div class="card">
+        <h4>Motion presets</h4>
+        <p class="muted" style="margin:0">
+          <span class="pill v">zoom in</span> <span class="pill v">zoom out</span>
+          <span class="pill c">pan left</span> <span class="pill c">pan right</span>
+          <span class="pill p">shake</span> <span class="pill p">pulse</span>
+          <span class="pill l">whip</span> — with a light grade so footage reads as edited.
+        </p>
+      </div>
+    </div>
+
+    <figure>
+      <img src="img/03-motion.jpg" alt="Three frames from a whip-pan motion clip" />
+      <figcaption>Three frames from one motion clip — the camera actually moves, it is not a static crop.</figcaption>
+    </figure>
+
+    <div class="pfoot">
+      <span>ClipForge · captions &amp; motion</span><span>Rugved.pvt.ltd · 2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ 4 · LIVE ══════════════════════ -->
+<section class="page">
+  <div class="pad">
+    <div class="phead">
+      <div>
+        <div class="tag">04 · Live video</div>
+        <h3>Clip the stream while it happens</h3>
+      </div>
+      <span class="pill p" style="background:#ffe3ea;color:#c21f59">● LIVE</span>
+    </div>
+
+    <div class="grid g2" style="margin-bottom:5mm">
+      <div class="card tint-p">
+        <h4><span class="dot p"></span> Detect</h4>
+        <p class="muted" style="margin:0">Any <code>.m3u8</code> / <code>.mpd</code> manifest, or a Twitch / YouTube-live / Kick page. The engine reads the manifest with ffmpeg and reports <b>LIVE</b> with no fixed duration.</p>
+      </div>
+      <div class="card tint-a">
+        <h4><span class="dot a"></span> Proxy</h4>
+        <p class="muted" style="margin:0">Manifests and segments stream through the local server with playlist rewriting, so the browser can play feeds that block CORS or need a Referer.</p>
+      </div>
+      <div class="card tint-v">
+        <h4><span class="dot v"></span> Record</h4>
+        <p class="muted" style="margin:0">ffmpeg captures N seconds from the live edge into a fragmented MP4, then remuxes it into a clean, seekable file.</p>
+      </div>
+      <div class="card tint-l">
+        <h4><span class="dot l"></span> Clip</h4>
+        <p class="muted" style="margin:0">Load the recording in the Studio, pick the moment, add captions and motion. Everything stays on disk in <code>.data/live</code>.</p>
+      </div>
+    </div>
+
+    <figure>
+      <img src="img/04-source.jpg" alt="A frame from a live/rolling HLS source" />
+      <figcaption>Live sources are timestamped by the broadcaster; ClipForge records a buffer, then clips it like any other file.</figcaption>
+    </figure>
+
+    <div class="divider"></div>
+    <p style="font-size:10px">
+      <b>Testing without a stream:</b> <code>npm run demo:live</code> serves a real rolling HLS
+      stream on <code>http://127.0.0.1:8080/live.m3u8</code> — paste it into the Live tab to see the
+      full detect → record → clip loop. Only record streams you have the rights to.
+    </p>
+
+    <div class="pfoot">
+      <span>ClipForge · live video</span><span>Rugved.pvt.ltd · 2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ 5 · CLAUDE CONNECTION ══════════════════════ -->
+<section class="page">
+  <div class="pad">
+    <div class="phead">
+      <div>
+        <div class="tag">05 · Claude Code</div>
+        <h3>One paste. Claude gets the studio.</h3>
+      </div>
+      <span class="pill v">MCP · stdio</span>
+    </div>
+
+    <p>Register the bundled MCP server once, from the repo root:</p>
+    <pre><span class="m"># 1 — install and start the studio</span>
+npm install <span class="g">&amp;&amp;</span> npm run setup <span class="g">&amp;&amp;</span> npm run dev
+
+<span class="m"># 2 — give Claude Code the tools</span>
+claude mcp add clipforge -- npx -y tsx mcp/server.ts
+
+<span class="m"># 3 — say this in Claude:</span>
+<span class="c">Connect to ClipForge, find a viral clip about gym transformations,</span>
+<span class="c">and edit it for TikTok.</span></pre>
+
+    <div class="grid g2">
+      <div class="card tint-v">
+        <h4><span class="dot v"></span> Tools</h4>
+        <p class="muted" style="margin:0; font-size:9.5px; line-height:1.8">
+          <code>check_engine</code><br />
+          <code>probe_video</code><br />
+          <code>clip_video</code><br />
+          <code>record_live</code><br />
+          <code>crew_video</code> <span class="pill l">10 agents</span><br />
+          <code>list_clips</code><br />
+          <code>get_clip</code><br />
+          <code>delete_clip</code>
+        </p>
+      </div>
+      <div class="card tint-c">
+        <h4><span class="dot c"></span> Saved prompts</h4>
+        <p class="muted" style="margin:0; font-size:9.5px; line-height:1.8">
+          <code>connect-clipforge</code><br />
+          <code>make-viral-clip</code> <span class="pill c">topic</span><br />
+          <code>clip-this-link</code> <span class="pill c">link · in · out</span><br />
+          <code>crew-roster</code>
+        </p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="card tint-a">
+      <h4><span class="dot a"></span> Token discipline — how the crew stays cheap</h4>
+      <div class="grid g2" style="margin-top:2mm; gap:3mm">
+        <p class="muted" style="margin:0; font-size:9.5px">
+          • The ten agents run inside the engine, not in the conversation.<br />
+          • One <code>crew_video</code> call replaces 5+ tool round-trips.<br />
+          • The reply is a dense ~90-token summary, not an agent log.<br />
+        </p>
+        <p class="muted" style="margin:0; font-size:9.5px">
+          • Saved prompts pre-shape the job, so Claude never re-plans.<br />
+          • Captions + motion + grade are a single ffmpeg pass.<br />
+          • Nothing re-downloads: sources are cached per link.
+        </p>
+      </div>
+    </div>
+
+    <div class="pfoot">
+      <span>ClipForge · Claude Code connection</span><span>Rugved.pvt.ltd · 2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ 6 · SERVICE GALLERY ══════════════════════ -->
+<section class="page">
+  <div class="pad">
+    <div class="phead">
+      <div>
+        <div class="tag">06 · Service gallery</div>
+        <h3>What a delivery looks like</h3>
+      </div>
+      <span class="pill l">real output</span>
+    </div>
+
+    <div class="grid g3" style="margin-bottom:4mm">
+      <figure>
+        <img src="img/01-crew-clip.jpg" alt="Finished vertical crew clip" />
+        <figcaption>Finished 9:16 crew clip</figcaption>
+      </figure>
+      <figure>
+        <img src="img/02-captions.jpg" alt="Caption styles" />
+        <figcaption>Caption styles, burned in</figcaption>
+      </figure>
+      <figure>
+        <img src="img/03-motion.jpg" alt="Motion frames" />
+        <figcaption>Motion, frame by frame</figcaption>
+      </figure>
+    </div>
+
+    <div class="grid g2" style="margin-bottom:4mm">
+      <figure>
+        <img src="img/04-source.jpg" alt="Source frame" />
+        <figcaption>Source → in/out → delivery</figcaption>
+      </figure>
+      <figure>
+        <img src="img/00-cover.png" alt="ClipForge cover" />
+        <figcaption>The product surface</figcaption>
+      </figure>
+    </div>
+
+    <div class="divider"></div>
+    <h4 style="margin-bottom:2mm">Every delivery includes</h4>
+    <p class="muted" style="font-size:9.5px">
+      The MP4 · burned-in captions · camera motion and grade · a poster frame · a caption pack with
+      hashtags and a recommended posting time · a QC report · and the clip indexed in the local
+      library, ready to re-clip.
+    </p>
+
+    <div class="pfoot">
+      <span>ClipForge · service gallery</span><span>Rugved.pvt.ltd · 2026</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ 7 · CLOSING ══════════════════════ -->
+<section class="page cover" style="background:
+      radial-gradient(800px 460px at 90% -10%, rgba(124,92,255,0.5), transparent 60%),
+      radial-gradient(700px 460px at 0% 110%, rgba(0,194,255,0.35), transparent 60%),
+      #090b12;">
+  <div class="inner">
+    <div class="brandrow">
+      <div class="logo">✂</div>
+      <div><h1>ClipForge</h1><small>by Rugved.pvt.ltd</small></div>
+    </div>
+
+    <div class="kicker" style="margin-top:34mm">Ready</div>
+    <h2>Paste a link.<br /><em>Get the clip.</em></h2>
+    <p class="lead">
+      Free, unlimited, local. Connect it to Claude Code and the whole production — search,
+      edit, captions, motion, caption pack and QC — happens in a single instruction.
+    </p>
+
+    <div class="badges">
+      <span class="badge hot">npm run dev</span>
+      <span class="badge">claude mcp add clipforge -- npx -y tsx mcp/server.ts</span>
+    </div>
+
+    <div class="foot">
+      <div><b>Rugved.pvt.ltd</b>Product · engineering · design</div>
+      <div style="text-align:right"><b>Thank you</b>clipforge · MIT · 2026</div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>

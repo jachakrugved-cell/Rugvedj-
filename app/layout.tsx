@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://127.0.0.1:3000"),
   title: "ClipForge — free local video clipper",
   description:
     "Paste any video link — YouTube, Vimeo, Twitch, HLS, MP4 or a live stream — clip it into vertical, square or widescreen clips with captions. 100% local, free, and connected to Claude Code.",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
       "Any link → any moment → a clean clip. Vertical exports, captions, live streams. Runs locally, connects to Claude Code over MCP.",
     images: ["/og.png"],
   },
+  twitter: { card: "summary_large_image", images: ["/og.png"] },
 };
 
 export default function RootLayout({

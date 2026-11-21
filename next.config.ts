@@ -7,9 +7,9 @@ const nextConfig: NextConfig = {
   // Never bundle the ffprobe binary — it is resolved at runtime from disk.
   serverExternalPackages: ["@ffprobe-installer/ffprobe"],
 
-  // Same-origin media proxy responses can be large; keep generous timeouts.
-  experimental: {
-    serverActions: { bodySizeLimit: "10mb" },
+  // The service report is a standalone HTML file served from public/docs/.
+  async rewrites() {
+    return [{ source: "/report", destination: "/docs/report.html" }];
   },
 };
 

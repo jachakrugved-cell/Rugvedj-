@@ -58,6 +58,10 @@ export type StudioProps = {
   setCaptionsOn: (v: boolean) => void;
   title: string;
   setTitle: (v: string) => void;
+  motion: string;
+  setMotion: (v: string) => void;
+  template: string;
+  setTemplate: (v: string) => void;
   clipping: boolean;
   onClip: () => void;
   lastResult: ClipRecord | null;
@@ -79,6 +83,7 @@ export default function StudioView(props: StudioProps) {
     range, setRange, seekTo, onSeek, aspect, setAspect, style, setStyle, captionText,
     setCaptionText, captionsOn, setCaptionsOn, title, setTitle, clipping, onClip,
     lastResult, onDeleteClip, onReclip, clips, tasks, health, onOpenLibrary,
+    motion, setMotion, template, setTemplate,
   } = props;
 
   const [thumbnail] = useState(true);
@@ -323,6 +328,54 @@ export default function StudioView(props: StudioProps) {
                 }`}
               >
                 {a.label}
+              </button>
+            ))}
+          </div>
+
+          <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wide text-muted">Motion &amp; template</label>
+          <select
+            className="input mb-2 !py-1.5 !text-xs"
+            value={template}
+            onChange={(e) => {
+              const t = e.target.value;
+              setTemplate(t);
+              if (t === "shorts-hook") { setAspect("9:16"); setMotion("zoom-in"); setStyle("bold"); }
+              if (t === "tiktok-karaoke") { setAspect("9:16"); setMotion("pulse"); setStyle("karaoke"); }
+              if (t === "reels-clean") { setAspect("9:16"); setMotion("pan-right"); setStyle("clean"); }
+              if (t === "podcast-clip") { setAspect("9:16"); setMotion("zoom-out"); setStyle("highlight"); }
+              if (t === "cinematic") { setAspect("16:9"); setMotion("pan-left"); setStyle("minimal"); }
+              if (t === "square-proof") { setAspect("1:1"); setMotion("zoom-in"); setStyle("clean"); }
+              if (t === "raw") { setAspect("original"); setMotion("none"); }
+            }}
+          >
+            <option value="custom">Custom (choose below)</option>
+            <option value="shorts-hook">Shorts hook — 9:16 · zoom · bold</option>
+            <option value="tiktok-karaoke">TikTok karaoke — 9:16 · pulse · karaoke</option>
+            <option value="reels-clean">Reels clean — 9:16 · pan · clean</option>
+            <option value="podcast-clip">Podcast clip — 9:16 · zoom-out · highlight</option>
+            <option value="cinematic">Cinematic — 16:9 · pan · minimal</option>
+            <option value="square-proof">Square proof — 1:1 · zoom</option>
+            <option value="raw">Raw cut — original · no motion</option>
+          </select>
+          <div className="mb-4 flex flex-wrap gap-1">
+            {[
+              ["none", "Static"],
+              ["zoom-in", "Zoom in"],
+              ["zoom-out", "Zoom out"],
+              ["pan-left", "Pan L"],
+              ["pan-right", "Pan R"],
+              ["shake", "Shake"],
+              ["pulse", "Pulse"],
+              ["whip", "Whip"],
+            ].map(([k, l]) => (
+              <button
+                key={k}
+                onClick={() => { setMotion(k); setTemplate("custom"); }}
+                className={`rounded-lg border px-1.5 py-1 text-[10.5px] font-medium transition ${
+                  motion === k ? "border-brand/60 bg-brand/15 text-ink" : "border-line text-muted hover:text-ink"
+                }`}
+              >
+                {l}
               </button>
             ))}
           </div>

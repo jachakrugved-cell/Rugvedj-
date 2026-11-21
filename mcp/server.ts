@@ -4,6 +4,7 @@
  *
  * Tools:
  *   check_engine  ping the engine, report ffmpeg / ffprobe / yt-dlp status
+ *   crew_video    run all 10 specialist agents (find → clip → caption → SEO)
  *   probe_video   read any link (page, MP4, HLS, DASH, live) → metadata
  *   clip_video    cut a clip by link or clip id (aspect, captions, styles)
  *   record_live   record N seconds of a live stream to a local MP4
@@ -22,6 +23,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { AGENTS, agentLines, runCrew, type AgentId } from "../lib/agents.js";
 import { EngineClient, EngineError } from "../lib/engine-client.js";
 import { parseTimecode } from "../lib/time.js";
 
@@ -239,6 +241,74 @@ server.tool(
 );
 
 server.tool(
+  "crew_video",
+  "ONE-CALL video team. Runs all 10 ClipForge agents: find a video (YouTube search or a link) → rank it → pick the moment → cut → caption → add motion → check audio → thumbnail → SEO → QC. Prefer this for requests like \"find a viral clip and edit it\" — it replaces 5+ tool round-trips and returns one dense summary.",
+  {
+    theme: z
+      .string()
+      .optional()
+      .describe('Search query, e.g. "viral cat shorts", or paste a video link here'),
+    url: z.string().optional().describe("Specific video link (skips search)"),
+    template: z
+      .enum(["shorts-hook", "reels-clean", "tiktok-karaoke", "podcast-clip", "cinematic", "square-proof", "raw"])
+      .optional()
+      .describe("Edit template: aspect + motion + caption style in one word. Default shorts-hook."),
+    platform: z
+      .enum(["youtube-shorts", "tiktok", "instagram-reels", "youtube", "linkedin"])
+      .optional()
+      .describe("Target platform (affects hashtags + recommended posting time)"),
+    start: z.number().optional().describe("Force an in-point (seconds). Otherwise the Editor picks."),
+    end: z.number().optional().describe("Force an out-point (seconds)."),
+    targetDurationSec: z.number().optional().describe("Desired clip length when the Editor picks (default 20)"),
+    captionScript: z
+      .string()
+      .optional()
+      .describe("Caption lines, one per line (auto-timed) or SRT/VTT. Omit for an auto hook script."),
+    motion: z
+      .enum(["none", "zoom-in", "zoom-out", "pan-left", "pan-right", "shake", "pulse", "whip"])
+      .optional()
+      .describe("Override the template's camera motion"),
+    only: z
+      .array(z.string())
+      .optional()
+      .describe("Run only these agent ids (talent-scout, analyst, editor, clip-smith, captioner, motion-artist, sound-tech, thumbnailist, seo-writer, qc-lead)"),
+    except: z.array(z.string()).optional().describe("Skip these agent ids"),
+  },
+  async (args) => {
+    try {
+      const crew = await runCrew({
+        theme: args.theme,
+        url: args.url,
+        template: args.template,
+        platform: args.platform,
+        start: args.start,
+        end: args.end,
+        targetDurationSec: args.targetDurationSec,
+        captionScript: args.captionScript,
+        motion: args.motion,
+        only: args.only as AgentId[] | undefined,
+        except: args.except as AgentId[] | undefined,
+      });
+      const lines = [
+        crew.ok ? "🎬 CREW DELIVERED" : "⚠️ CREW FAILED",
+        "",
+        agentLines(crew),
+        "",
+        crew.clip ? `FILE: ${crew.clip.file}` : "",
+        crew.clip
+          ? `OPEN: ${engine.baseUrl} (Library tab) · id=${crew.clip.id}`
+          : crew.search.note ?? "",
+        crew.seo ? `SEO: ${crew.seo.title} · ${crew.seo.hashtags.join(" ")} · best ${crew.seo.bestTime}` : "",
+        crew.thumbnail ? `THUMB: ${crew.thumbnail.file}` : "",
+      ];
+      return text(lines.filter(Boolean).join("\n"));
+    } catch (err) {
+      return fail(err);
+    }
+  },
+);
+
+server.tool(
   "list_clips",
   "List clips in the local ClipForge library, newest first.",
   {
@@ -284,6 +354,107 @@ server.tool(
       return fail(err);
     }
   },
+);
+
+// ─────────────────────────── Saved prompts ───────────────────────────
+// Short, argument-based prompts keep the user's context window small:
+// the engine expands them server-side instead of Claude re-deriving a plan.
+
+server.prompt(
+  "connect-clipforge",
+  "Connect Claude to the ClipForge browser engine and verify every binary.",
+  {},
+  async () => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: "Call check_engine. If it is online, reply with ONE line: the engine URL, ffmpeg/yt-dlp status, and the Studio link. Do not restate the tool output.",
+        },
+      },
+    ],
+  }),
+);
+
+server.prompt(
+  "make-viral-clip",
+  "Find one viral video for a topic and produce a finished, captioned, moving clip.",
+  {
+    topic: z.string().describe("Topic to search, e.g. \"viral cat shorts\""),
+    template: z
+      .enum(["shorts-hook", "reels-clean", "tiktok-karaoke", "podcast-clip", "cinematic", "square-proof", "raw"])
+      .optional()
+      .describe("Edit style (default shorts-hook)"),
+    caption_text: z.string().optional().describe("Optional caption lines, one per line"),
+  },
+  async ({ topic, template, caption_text }) => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: [
+            `Call crew_video with theme="${topic}"${template ? `, template="${template}"` : ""}${
+              caption_text ? `, captionScript=${JSON.stringify(caption_text)}` : ""
+            }.`,
+            "Reply with at most 6 short lines: title, duration, resolution, file path, hashtags, and whether QC passed. Never paste the whole agent log.",
+          ].join("\n"),
+        },
+      },
+    ],
+  }),
+);
+
+server.prompt(
+  "clip-this-link",
+  "Clip a specific link (or a live stream) with one line of input.",
+  {
+    link: z.string().describe("Video or live stream URL"),
+    start: z.string().optional().describe("In-point, e.g. 0:42"),
+    end: z.string().optional().describe("Out-point, e.g. 1:10"),
+    template: z
+      .enum(["shorts-hook", "reels-clean", "tiktok-karaoke", "podcast-clip", "cinematic", "square-proof", "raw"])
+      .optional(),
+  },
+  async ({ link, start, end, template }) => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: [
+            `Use ClipForge. First call probe_video url="${link}".`,
+            "If it is LIVE, call record_live with durationSec=60, then clip the returned file.",
+            `Otherwise call clip_video with source="${link}"${start ? `, start="${start}"` : ""}${end ? `, end="${end}"` : ""}${
+              template ? `, template="${template}"` : ', template="shorts-hook"'
+            }.`,
+            "Reply in 4 lines max: file path, duration, resolution, QC status. No explanation of ffmpeg.",
+          ].join("\n"),
+        },
+      },
+    ],
+  }),
+);
+
+server.prompt(
+  "crew-roster",
+  "Show the 10 agents and what each one does (for the user's report or a quick sanity check).",
+  {},
+  async () => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text:
+            "List the ClipForge crew in a compact table: number, agent name, one-line job. " +
+            "Use this roster:\n" +
+            AGENTS.map((a) => `${a.n}. ${a.name} — ${a.role}`).join("\n"),
+        },
+      },
+    ],
+  }),
 );
 
 async function main() {

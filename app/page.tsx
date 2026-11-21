@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ConnectView from "@/components/ConnectView";
+import CrewView from "@/components/CrewView";
 import LibraryView from "@/components/LibraryView";
 import LiveView from "@/components/LiveView";
 import StudioView from "@/components/StudioView";
@@ -15,7 +16,7 @@ import type {
   Task,
 } from "@/lib/types";
 
-type Tab = "studio" | "live" | "library" | "connect";
+type Tab = "studio" | "crew" | "live" | "library" | "connect";
 
 const EMPTY_RANGE = { start: 0, end: 0 };
 
@@ -32,6 +33,8 @@ export default function App() {
   const [seekTo, setSeekTo] = useState<number | undefined>(undefined);
 
   const [aspect, setAspect] = useState<AspectRatio>("9:16");
+  const [motion, setMotion] = useState<string>("zoom-in");
+  const [template, setTemplate] = useState<string>("shorts-hook");
   const [style, setStyle] = useState<CaptionStyleName>("clean");
   const [captionsOn, setCaptionsOn] = useState(false);
   const [captionText, setCaptionText] = useState("");
@@ -179,6 +182,9 @@ export default function App() {
           aspect,
           captions: captionsOn ? captionText : undefined,
           captionStyle: style,
+          motion,
+          template: template === "custom" ? undefined : template,
+          grade: "light",
         }),
       });
       const j = (await r.json()) as { ok?: boolean; clip?: ClipRecord; error?: string };
@@ -191,7 +197,7 @@ export default function App() {
     } finally {
       setClipping(false);
     }
-  }, [source, range, title, aspect, captionsOn, captionText, style, notify, refreshClips]);
+  }, [source, range, title, aspect, captionsOn, captionText, style, motion, template, notify, refreshClips]);
 
   const recordNow = useCallback(async () => {
     if (!source) return;
@@ -234,6 +240,7 @@ export default function App() {
           {(
             [
               ["studio", "Studio"],
+              ["crew", "Crew"],
               ["live", "Live"],
               ["library", `Library${clips.length ? ` · ${clips.length}` : ""}`],
               ["connect", "Connect"],
@@ -275,6 +282,10 @@ export default function App() {
           setCaptionsOn={setCaptionsOn}
           title={title}
           setTitle={setTitle}
+          motion={motion}
+          setMotion={setMotion}
+          template={template}
+          setTemplate={setTemplate}
           clipping={clipping}
           onClip={clipNow}
           lastResult={lastResult}
@@ -288,6 +299,16 @@ export default function App() {
           recording={recording}
           liveSecs={liveSecs}
           setLiveSecs={setLiveSecs}
+        />
+      )}
+
+      {tab === "crew" && (
+        <CrewView
+          tasks={tasks}
+          onOpenClip={(clip) => {
+            setLastResult(clip);
+            probe(clip.sourceUrl);
+          }}
         />
       )}
 
@@ -319,6 +340,7 @@ export default function App() {
           your machine
         </span>
         <span className="flex items-center gap-2">
+          <a href="/report" className="btn btn-ghost !px-2.5 !py-1 text-[10.5px]">Service report</a>
           <Chip tone={health?.ok ? "ok" : "live"}>{health?.ok ? "engine online" : "engine check"}</Chip>
           <span className="mono">v1.0.0</span>
         </span>

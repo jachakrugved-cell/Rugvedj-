@@ -27,6 +27,8 @@ import { addClip, type ClipRecord } from "./library";
 import { downloadSource, getSourceInfo, localSourcePath } from "./media";
 import { bus, createTask, newId, updateTask, type Task } from "./tasks";
 import { slugify, toFfmpegTs } from "./time";
+import { gradeChain, motionChain, type MotionPreset } from "./motion";
+import { resolveEditStyle } from "./templates";
 
 export type AspectRatio = "original" | "9:16" | "1:1" | "4:5" | "16:9" | "4:3";
 
@@ -41,6 +43,12 @@ export type ClipOptions = {
   forceReencode?: boolean;
   filename?: string;
   maxHeight?: number;
+  /** Edit template: aspect + motion + caption style in one word. */
+  template?: string;
+  /** Camera motion preset (overrides the template's). */
+  motion?: string;
+  /** Colour grade: off | light | cinematic (defaults from template). */
+  grade?: "off" | "light" | "cinematic";
 };
 
 export type RecordOptions = {
@@ -122,7 +130,15 @@ async function keyframeBefore(file: string, start: number): Promise<number | nul
 
 export async function createClip(opts: ClipOptions): Promise<ClipResult> {
   await ensureDirs();
-  const aspect = opts.aspect ?? "original";
+  const style = resolveEditStyle({
+    template: opts.template,
+    aspect: opts.aspect,
+    motion: opts.motion,
+    captionStyle: opts.captionStyle,
+  });
+  const aspect: AspectRatio = style.aspect;
+  const motion: MotionPreset = style.motion;
+  const grade = opts.grade ?? style.grade;
   const src = opts.source.trim();
   if (!src) throw new Error("A video link or clip id is required.");
 
@@ -188,6 +204,8 @@ export async function createClip(opts: ClipOptions): Promise<ClipResult> {
       opts.forceReencode ||
       pad ||
       !!opts.captions ||
+      motion !== "none" ||
+      grade !== "off" ||
       (aspect !== "original" && Math.abs(W / H - w / h) > 0.01);
 
     let seekStart = start;
@@ -226,17 +244,18 @@ export async function createClip(opts: ClipOptions): Promise<ClipResult> {
 
     // 6. Build the ffmpeg command
     // Aspect conversion fills the frame (center crop) like CapCut/Opus Clip:
-    // scale so the frame is covered, then crop the overflow.
+    // scale so the frame is covered, then crop the overflow. Motion presets
+    // and the grade run on the framed stream so the output size never drifts.
     const filterParts: string[] = [];
-    if (pad) {
-      filterParts.push(
-        `[0:v]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1,fps=30[v]`,
-      );
-    } else {
-      filterParts.push(
-        `[0:v]scale=${w}:${h}:force_original_aspect_ratio=decrease,setsar=1[v]`,
-      );
-    }
+    const frame = pad
+      ? `scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},setsar=1,fps=30`
+      : `scale=${w}:${h}:force_original_aspect_ratio=decrease,setsar=1,fps=30`;
+
+    const motionFn = motionChain(motion, w, h, 30);
+    const gradeFn = gradeChain(grade);
+    const post = [motionFn, gradeFn].filter(Boolean).join(",");
+    filterParts.push(`[0:v]${frame}${post ? `,${post}` : ""}[v]`);
+
     let mapArgs: string[];
     if (assPath) {
       filterParts.push(`[v]ass='${escapeFilterPath(assPath)}'[vout]`);
@@ -286,7 +305,7 @@ export async function createClip(opts: ClipOptions): Promise<ClipResult> {
     updateTask(task.id, {
       message: copy ? "Cutting (stream copy)…" : "Encoding clip…",
       progress: 2,
-      meta: { mode: copy ? "copy" : "encode", width: w, height: h },
+      meta: { mode: copy ? "copy" : "encode", width: w, height: h, motion, grade },
     });
 
     await runFfmpeg(args, task, end - seekStart);
@@ -309,8 +328,15 @@ export async function createClip(opts: ClipOptions): Promise<ClipResult> {
       endSec: end,
       aspect,
       captions: !!assPath,
-      style: opts.captionStyle ?? "none",
-      meta: { width: w, height: h, mode: copy ? "copy" : "encode" },
+      style: assPath ? (opts.captionStyle ?? style.captionStyle) : "none",
+      meta: {
+        width: w,
+        height: h,
+        mode: copy ? "copy" : "encode",
+        motion,
+        grade,
+        template: style.template,
+      },
     };
     await addClip(record);
     updateTask(task.id, {

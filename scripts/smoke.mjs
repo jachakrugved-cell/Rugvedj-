@@ -210,6 +210,26 @@ async function main() {
     rmSync(liveDir, { recursive: true, force: true });
   }
 
+  // 5 ── crew pipeline (10 agents, one call)
+  console.log(`\n${B}6. Crew: 10 agents in one call${X}`);
+  const crewRes = await post("/api/crew", {
+    url: demoUrl,
+    template: "shorts-hook",
+    platform: "youtube-shorts",
+    targetDurationSec: 10,
+  }, 600_000);
+  const crew = crewRes;
+  check(crew?.ok === true, `crew delivered (${crew?.agents?.filter((a) => a.status === "done").length ?? 0}/10 agents done)`, `crew failed: ${crew?.error ?? "no result"}`);
+  if (crew?.clip) {
+    const cm = ffprobeJson(crew.clip.file);
+    const cv = cm?.streams?.find((s) => s.codec_type === "video");
+    check(cv?.width === 1080 && cv?.height === 1920, `crew clip is 1080x1920 with ${crew.clip.meta?.motion ?? "?"} motion`, `unexpected crew size ${cv?.width}x${cv?.height}`);
+    check(!!crew.seo?.title && crew.seo?.hashtags?.length > 0, `SEO pack: "${crew.seo?.title}" ${crew.seo?.hashtags?.slice(0, 3).join(" ")}`, "SEO pack missing");
+    check(!!crew.thumbnail, "poster frame extracted", "no poster frame");
+    const qc = crew.agents?.find((a) => a.id === "qc-lead");
+    check(qc?.status === "done", "QC lead passed the delivery", `QC failed: ${qc?.output}`);
+  }
+
   // summary
   console.log("\n" + "─".repeat(52));
   if (failures === 0) {
